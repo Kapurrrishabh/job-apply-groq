@@ -103,7 +103,6 @@ def page(request: Request, name: str, ctx: Ctx | None = None, **data):
     data.update(request=request, nav=name.rsplit(".", 1)[0], user=ctx.user if ctx else None,
                 csrf=ctx.sess.csrf if ctx else "", msg=request.query_params.get("msg"), kind=request.query_params.get("kind", "ok"))
     if ctx:
-        from .. import site_sessions
         from ..ai import keys
         from ..automation import worker
         data.setdefault("has_key", keys.hint(ctx.s, ctx.uid) != "not set")
@@ -112,9 +111,10 @@ def page(request: Request, name: str, ctx: Ctx | None = None, **data):
 
 
 def back(url: str, msg: str = "", kind: str = "ok") -> RedirectResponse:
+    path, hash_, anchor = url.partition("#")
     if msg:
-        url += ("&" if "?" in url else "?") + f"msg={quote(msg)}&kind={kind}"
-    return RedirectResponse(url, status_code=303)
+        path += ("&" if "?" in path else "?") + f"msg={quote(msg)}&kind={kind}"
+    return RedirectResponse(path + hash_ + anchor, status_code=303)
 
 
 def csrf_field(token: str) -> Markup:

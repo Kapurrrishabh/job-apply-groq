@@ -174,6 +174,12 @@ def test_real_numbers_and_plain_words_pass(profile_data):
     assert letters.check(["I cut inference latency by 40% with ONNX export."], P(profile_data), job) == []
 
 
+def test_same_number_written_differently_passes(profile_data):
+    job = SimpleNamespace(title="ML Intern", description="Python")
+    letter = ["I built a RAG search over 12,000 documents and cut latency by 40 percent; shelf detection reached 92 per cent."]
+    assert letters.check(letter, P(profile_data), job) == []
+
+
 def test_hype_and_em_dash_are_flagged(profile_data):
     issues = letters.check(["I am passionate — truly."], P(profile_data), SimpleNamespace(title="", description=""))
     assert len(issues) == 2

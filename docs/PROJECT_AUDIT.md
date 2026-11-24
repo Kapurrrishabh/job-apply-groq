@@ -59,5 +59,5 @@ and snapshots; My Applications preview; agent orchestrator with tool calling and
 console fed by real events; diagnostics; mock job site and browser/end-to-end tests; platform policy layer.
 
 ## Privacy finding
-The three local commits contain personal data (`data/profile.yaml`, CVs, tracker). The master specification forbids
+(Resolved: see KNOWN_ISSUES #7.) The three local commits contain personal data (`data/profile.yaml`, CVs, tracker). The master specification forbids
 committing personal data, so history will be rebuilt without it before any push (see ARCHITECTURE_DECISIONS ADR-009).

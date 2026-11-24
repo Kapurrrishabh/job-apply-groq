@@ -9,15 +9,21 @@ from pathlib import Path
 import yaml
 from sqlalchemy import select
 
-from . import config, crypto, db
+from . import config, db
 from .profile import Bullet, Education, Experience, Language, Personal, Preferences, Profile, Project, Skills
 from . import profile as profiles
 
-LEGACY = config.ROOT / "data"
+def _marker() -> Path:
+    return config.instance() / "legacy-imported"
 
 
-def available(root: Path = LEGACY) -> bool:
-    return (root / "profile.yaml").exists()
+def _root() -> Path:
+    return config.ROOT / "data"
+
+
+def available(root: Path | None = None) -> bool:
+    """The earlier data is one person's, so once any account imports it, no other account is offered it."""
+    return ((root or _root()) / "profile.yaml").exists() and not _marker().exists()
 
 
 def to_profile(d: dict, source: str = "manual") -> Profile:
@@ -81,9 +87,9 @@ def _resume_row(s, user_id: int, src: Path, label: str, kind: str, default: bool
 SENSITIVE = re.compile(r"(?i)ctc|salary|compensation|gender|race|ethnic|veteran|disabilit|sponsor|authori|legally|government|securities|non.?compete")
 
 
-def run(s, user_id: int, root: Path = LEGACY, committed_profile: Path | None = None) -> dict:
+def run(s, user_id: int, root: Path | None = None, committed_profile: Path | None = None) -> dict:
     """Import everything; safe to call once. Returns counts for the UI."""
-    counts = {}
+    root, counts = root or _root(), {}
     current = yaml.safe_load((root / "profile.yaml").read_text())
     newest = to_profile(current, source="resume:import")
     if committed_profile and committed_profile.exists():
@@ -141,4 +147,5 @@ def run(s, user_id: int, root: Path = LEGACY, committed_profile: Path | None = N
     if old_profile.exists() and not dest.exists():
         shutil.move(str(old_profile), dest)
     s.commit()
+    _marker().write_text(str(user_id))
     return counts

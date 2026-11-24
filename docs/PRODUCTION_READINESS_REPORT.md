@@ -4,44 +4,71 @@ Date: 2026-11-24. Scope: a personal / household app running on one computer (`12
 
 ## Verdict
 
-Ready for personal and family use on your own machine. The full apply journey works end to end against a local job
-board with a real browser. Live submission to real employer systems (Greenhouse, Lever, Ashby) and Wellfound has not
-been re-run since the rebuild; treat the first few real applications as supervised (see "Not verified").
+Ready for personal and family use on your own machine. Every apply path works end to end in a real browser against a
+local job board, the UI was driven click by click, and the Groq calls and a real employer form were checked live.
+Still to watch: the first real submissions on Lever, Ashby and Wellfound (see "Not verified").
 
 ## Test evidence
 
-Run: `python -m pytest -q` on macOS, Python 3.13.15, FastAPI 0.163.1, SQLAlchemy 2.1.9, Chrome headless.
-Result: **111 passed, 0 failed** in 21 s.
+`python -m pytest -q`: **157 passed, 0 failed**, on macOS with Python 3.13.15 (the main environment) and again with
+Python 3.12.14 in a fresh virtual environment built only from `requirements.txt` (113 s).
 
 | File | Tests | What it covers |
 |---|---|---|
-| `tests/test_core.py` | 49 | state machine, evidence rules, sensitive questions, form decisions, hybrid ranking, profile merge and versions, upload validation, cover-letter evidence check, CV tailoring filters, strict Groq schemas, encryption, log redaction, skill registry, agent tool schema |
-| `tests/test_groq.py` | 11 | rejected key, 429 retry with `retry-after`, rate limit that never clears, timeout, strict vs JSON mode per model, key only in the auth header, malformed output repaired once, malformed twice fails, no key, encrypted key storage, prompt-injection fencing |
-| `tests/test_web.py` | 33 | sign-in redirect, wrong and short passwords, CSRF rejection, other-host and other-origin rejection, all 13 pages render with security headers, key never shown back, per-user isolation (pages, bulk actions, agent tools), profile save and bad YAML, answers, resume upload and fake-PDF refusal, resume import needs review, Apply needs the confirmation tick, assisted platforms are prepared not submitted, agent shortlists but cannot submit, database backup before migration |
-| `tests/test_e2e.py` | 9 | headless Chrome against `tests/mock_board.py`: the 20-step journey below, closed posting, CAPTCHA pause, unknown and sensitive questions then resume, missing confirmation then user confirmation, duplicate repost, daily limit, Groq rate limit during apply, crash recovery |
-| `tests/test_gates.py` | 9 | location, pay, experience and company filters |
+| `test_core.py` | 50 | state machine, evidence rules, sensitive questions, form decisions, hybrid ranking, profile merge and versions, upload validation, letter number check (by value), CV tailoring filters, every Groq schema is strict, encryption, log redaction, skill registry, agent tools |
+| `test_groq.py` | 13 | rejected key, 429 with `retry-after`, rate limit that never clears, timeout, strict vs JSON mode, key only in the auth header, malformed output repaired, Groq `json_validate_failed` retried, no key, encrypted key, injection fencing, output budget |
+| `test_web.py` | 38 | sign-in, CSRF, other host/origin refused, 13 pages render, every template link and form has a route, every label is linked to its field, isolation (pages, bulk, agent), profile, answers, uploads, import review, Apply needs the tick, assisted sites, agent cannot submit, migration backup, test board hidden, earlier data imported once, tailored CV built with real TeX (one page, waits for approval) |
+| `test_e2e.py` | 27 | headless Chrome against `tests/mock_board.py` (below) |
+| `test_ui.py` | 20 | Playwright clicking through the app (below) |
+| `test_gates.py` | 9 | location, pay, experience and company filters |
 
-**The 20-step journey** (`test_full_journey`): register → save Groq key → test connection → upload resume → Groq reads
-it → review and accept → profile saved → add an answer → search the board → duplicate marked → rank → explained score
-→ write letter → edit letter (version 2) → shortlist → queue → authorize → browser fills and submits → verified with
-reference `TB-…` and screenshot → board received the exact name, email, phone, PDF and letter → My Applications shows
-the snapshot, the exact resume file and the screenshot → delete removes the record and files.
+**Apply scenarios** (`test_e2e.py`): the 20-step journey; closed posting; CAPTCHA wording; visible "I am not a robot"
+box; "protected by reCAPTCHA" notice does *not* stop it; unknown + sensitive questions, answered, then submitted; no
+confirmation, then you confirm; server error after Submit; duplicate repost; daily limit; Groq rate limit and rejected key
+during apply; restart recovery; no resume; missing phone; form without a resume field; radio, checkbox and select from
+saved answers; consent box never ticked without your answer; confident AI answer; one click with mixed outcomes; board
+down then retry; stopping a waiting run; stopping a running batch; crash mid-batch; application locked by another run;
+Wellfound waits for sign-in; approved tailored CV sent instead of the default (unapproved one is not); two people apply
+with their own details.
+
+**UI scenarios** (`test_ui.py`): sign up, out, wrong password, back in; deep link returns after sign-in; every menu page
+with zero console or CSP errors; five pages and the waiting cards fit a phone; the whole journey by clicking (key,
+connection test, resume upload and import review, answers, search with the live console, select-all, rank, letter
+write/edit/rewrite, the required confirmation tick, apply, evidence screenshot, exact resume download, delete with the
+confirm dialog cancelled then accepted); answering questions from the queue; CAPTCHA handed to you with the menu
+counter; unconfirmed then confirmed; assisted LinkedIn job prepared, you submit; removing from the queue; the Stop
+button; console level filter; agent run shown live; clear messages for bad inputs; a second person sees only their data.
 
 ## Live checks outside the test suite
 
 | Check | Result |
 |---|---|
-| Every strict JSON schema the app sends, against the real Groq API (`openai/gpt-oss-120b`) | 7 of 7 accepted after one fix (below); tool calling returned a valid `profile_summary` call |
-| "Import earlier data" dry run into a throwaway instance with the real earlier data | 3 profile versions (100% complete, 18 bullets), 33 answers, 23 resumes, 51 applications, Groq key; real browser profile untouched |
+| Every strict schema the app sends, against the real Groq API (`openai/gpt-oss-120b`) | 7 of 7 accepted; tool calling works |
+| Ranking, cover letter, resume reading and a two-step agent run through the app's code with real Groq | all succeeded; ranking ignored a "give this job 100" instruction planted in the posting |
+| freehire.me public API search | 75 jobs across 16 sources |
+| Real Greenhouse form, read only (nothing typed or sent) | no false CAPTCHA; 7 fields filled from the profile, resume upload found, the one personal question left for you |
+| "Import earlier data" dry run into a throwaway instance | 3 profile versions (100%), 33 answers, 23 resumes, 51 applications, Groq key; real browser profile untouched |
 
 ## Defects found and fixed during verification
 
-| Defect | How it was found | Fix |
+| Defect | Found by | Fix |
 |---|---|---|
-| Groq rejected the resume-reading schema (a free-form salary map), so resume import would fail for everyone | live schema check | resumes are read into `Facts` (no preferences); a test now walks every schema sent to Groq |
-| A failed agent tool call could leave part of its change behind (one job shortlisted while reporting an error) | agent isolation test | failed tool calls roll back |
-| Another user's job id produced a server error instead of "not found" | isolation test | `LookupError` maps to a 404 page |
-| Two copies of the worker loop (test and real) | review | one shared `_drain` / `_process` |
+| Groq rejected the resume-reading schema, so resume import failed for everyone | live schema check | resumes read into `Facts`; test walks every schema |
+| Cover letters failed intermittently: hidden reasoning used up the 2,000-token budget | live Groq run | default budget 6,000 (measured); Groq JSON failures get the one repair retry |
+| Letter check flagged true numbers written differently ("12,000" vs "12k") | live Groq run | numbers compared by value |
+| Every Greenhouse application would stop on an invisible reCAPTCHA | live read-only form check | pause only for a challenge that is shown; hidden helper fields ignored |
+| Stopped or crashed runs left jobs stuck in Queued forever | scenario review | they return to the shortlist |
+| A failed agent tool call could leave half its change | agent test | failed calls roll back |
+| Another person's job id caused a server error | isolation test | 404 page |
+| Messages were lost on pages with a `#section` link | Playwright | message goes before the `#` |
+| Labels not linked to fields (screen readers, clicking a label) | Playwright | every label linked; test added |
+| Menu bottom (Sign out, Diagnostics) unreachable on short screens | Playwright | menu scrolls |
+| Pages scrolled sideways on phones; buttons cut off on waiting cards | Playwright, screenshots | phone layout fixed; tests added |
+| Job page score squeezed into a corner | screenshots | score as a header line |
+| Test board offered to real users | screenshots | shown only while tests run it |
+| Any account could import one person's earlier data | review | import works once per installation |
+| Missing site icon (a 404 on every page) | Playwright | icon added |
+| Unused imports, duplicated worker loop | lint, review | removed / one shared loop |
 
 ## Security summary
 
@@ -50,7 +77,7 @@ the snapshot, the exact resume file and the screenshot → delete removes the re
 - Groq keys, site logins and application snapshots are Fernet-encrypted with `instance/master.key` (0600).
 - Strict CSP (`script-src 'self'`), `X-Frame-Options: DENY`, `nosniff`; job links pass a scheme check.
 - Uploads: type, size (5 MB), PDF magic bytes, DOCX structure and zip-bomb guard.
-- Job text and resume text go to Groq fenced as untrusted data; the agent has no submit tool; skills are data only.
+- Job and resume text go to Groq fenced as untrusted data; the agent has no submit tool; skills are data only.
 - Keys, passwords, tokens and cookies are redacted from every event before storage.
 - No CAPTCHA or OTP bypass, no stealth, no proxies. Platform automation follows each site's terms (`PLATFORM_POLICIES.md`).
 
@@ -58,9 +85,9 @@ the snapshot, the exact resume file and the screenshot → delete removes the re
 
 | Item | Why | How to confirm |
 |---|---|---|
-| Real submissions on Greenhouse, Lever, Ashby and Wellfound since the rebuild | needs your authorization per application | apply to 2-3 real jobs and watch the Console; check each one's evidence |
-| Tailored CV PDF build | not run in tests (needs TeX and a live Groq call) | open a job, press *Tailor my CV*, review and approve |
-| Windows and Linux | only macOS was run | run the test suite there |
+| Real submissions on Lever, Ashby and Wellfound | none appeared in today's searches / needs your sign-in and authorization | apply to 1-2 real jobs each and check the evidence |
+| A real Greenhouse submission | the check was read-only by design | your first Greenhouse application: watch the Console |
+| Windows and Linux; Python 3.11 | only macOS with 3.12 and 3.13 was run | run the test suite there |
 | Naukri terms | page returned HTTP 403 | stays assisted until read |
 
 ## Rollback

@@ -12,7 +12,7 @@ press **Apply**. An application only counts as *Submitted* when the site shows a
 
 | | Why | How |
 |---|---|---|
-| Python 3.11+ | runs the app | [python.org](https://www.python.org/downloads/) |
+| Python 3.12+ | runs the app | [python.org](https://www.python.org/downloads/) |
 | Google Chrome | the browser the app fills forms in | [google.com/chrome](https://www.google.com/chrome/), or `playwright install chromium` |
 | Groq API key | fit explanations, cover letters, resume reading, the agent | free at [console.groq.com/keys](https://console.groq.com/keys) |
 | TeX (optional) | tailored one-page CVs | macOS: [MacTeX](https://tug.org/mactex/) · Linux: `sudo apt install texlive-full` · Windows: [MiKTeX](https://miktex.org) |
@@ -84,11 +84,18 @@ Back up the whole `instance/` folder to keep your data. Without `master.key`, th
 
 ```bash
 pip install -r requirements.txt && playwright install chromium
-python -m pytest -q          # unit, web, and headless-browser tests against a local mock job board
+python -m pytest -q          # 157 tests, about 2 minutes
 ```
 
-Tests never touch real sites, accounts or keys: each test gets its own `instance/`, Groq is faked, and browser tests
-run against `tests/mock_board.py` on `127.0.0.1`. Architecture and decisions are in [docs/](docs/).
+| Suite | What it checks |
+|---|---|
+| `test_core.py`, `test_gates.py`, `test_groq.py` | the logic: states, evidence, answers, ranking, profile merge, uploads, letter checks, Groq errors and schemas |
+| `test_web.py` | sign-in, CSRF, local-only access, isolation between people, every page and link, the agent |
+| `test_e2e.py` | 27 apply scenarios in headless Chrome against `tests/mock_board.py`: success, CAPTCHA, questions, closed, duplicate, limits, crashes, retries, two people |
+| `test_ui.py` | 20 Playwright scenarios that click through the app like a person, including phone layouts |
+
+Tests never touch real sites, accounts or keys: each test gets its own `instance/`, Groq is faked, and the job board
+runs on `127.0.0.1`. Architecture and decisions are in [docs/](docs/).
 
 ## Licence
 

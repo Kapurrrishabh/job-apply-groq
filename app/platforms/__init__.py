@@ -31,6 +31,12 @@ PLATFORMS: dict[str, Policy] = {
 }
 
 
+def offered() -> dict[str, Policy]:
+    """Platforms shown to people. The local test board only appears while the test suite runs one."""
+    from .testboard import base
+    return {k: p for k, p in PLATFORMS.items() if k != "testboard" or base()}
+
+
 def adapters():
     from .ats import AUTOMATED, EmployerSystem
     from .freehire import Freehire

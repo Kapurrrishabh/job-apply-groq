@@ -22,7 +22,11 @@ def enqueue(s, user_id: int, kind: str, params: dict) -> db.Execution:
 def cancel(s, user_id: int, execution_id: int) -> None:
     ex = s.get(db.Execution, execution_id)
     if not ex or ex.user_id != user_id: raise LookupError("Execution not found")
-    if ex.status == "queued": ex.status = "cancelled"
+    if ex.status == "queued":
+        ex.status = "cancelled"
+        if ex.kind == "apply_batch":
+            from .applications import release
+            release(s, user_id, ex.params["application_ids"])
     elif ex.status == "running": _cancel.add(ex.id)
 
 

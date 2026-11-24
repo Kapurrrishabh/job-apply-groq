@@ -8,30 +8,30 @@
 {% set pe = p.personal %}{% set pr = p.preferences %}
 <form class="card" method="post" action="/profile/basic">{{ csrf_field(csrf) }}
   <h2>About you</h2>
-  <div class="row"><div><label>Full name</label><input type="text" name="name" value="{{ pe.name }}" required></div>
-    <div><label>Email</label><input type="email" name="email" value="{{ pe.email }}"></div>
-    <div><label>Phone</label><input type="text" name="phone" value="{{ pe.phone }}"></div></div>
-  <div class="row"><div><label>Current city</label><input type="text" name="current_location" value="{{ pe.current_location }}"></div>
-    <div><label>Citizenship</label><input type="text" name="citizenship" value="{{ pe.citizenship }}"></div>
-    <div><label>Address <span class="hint">used only when a form asks</span></label><input type="text" name="address" value="{{ pe.address }}"></div></div>
-  <div class="row"><div><label>LinkedIn</label><input type="text" name="linkedin" value="{{ pe.linkedin }}"></div>
-    <div><label>GitHub</label><input type="text" name="github" value="{{ pe.github }}"></div>
-    <div><label>Portfolio</label><input type="text" name="portfolio" value="{{ pe.portfolio }}"></div></div>
-  <label>Headline</label><input type="text" name="headline" value="{{ pe.headline }}" placeholder="e.g. Final-year CS student building ML systems">
+  <div class="row"><div><label for="f-name">Full name</label><input id="f-name" type="text" name="name" value="{{ pe.name }}" required></div>
+    <div><label for="f-email">Email</label><input id="f-email" type="email" name="email" value="{{ pe.email }}"></div>
+    <div><label for="f-phone">Phone</label><input id="f-phone" type="text" name="phone" value="{{ pe.phone }}"></div></div>
+  <div class="row"><div><label for="f-current_location">Current city</label><input id="f-current_location" type="text" name="current_location" value="{{ pe.current_location }}"></div>
+    <div><label for="f-citizenship">Citizenship</label><input id="f-citizenship" type="text" name="citizenship" value="{{ pe.citizenship }}"></div>
+    <div><label for="f-address">Address <span class="hint">used only when a form asks</span></label><input id="f-address" type="text" name="address" value="{{ pe.address }}"></div></div>
+  <div class="row"><div><label for="f-linkedin">LinkedIn</label><input id="f-linkedin" type="text" name="linkedin" value="{{ pe.linkedin }}"></div>
+    <div><label for="f-github">GitHub</label><input id="f-github" type="text" name="github" value="{{ pe.github }}"></div>
+    <div><label for="f-portfolio">Portfolio</label><input id="f-portfolio" type="text" name="portfolio" value="{{ pe.portfolio }}"></div></div>
+  <label for="f-headline">Headline</label><input id="f-headline" type="text" name="headline" value="{{ pe.headline }}" placeholder="e.g. Final-year CS student building ML systems">
   <h2 style="margin-top:20px">What you are looking for</h2>
-  <div class="row"><div><label>Roles <span class="hint">comma separated</span></label><input type="text" name="roles" value="{{ pr.roles|join(', ') }}"></div>
-    <div><label>Locations</label><input type="text" name="locations" value="{{ pr.locations|join(', ') }}"></div>
-    <div><label>Industries</label><input type="text" name="industries" value="{{ pr.industries|join(', ') }}"></div></div>
-  <div class="row"><div><label>Work mode</label>{% for m in ['remote','hybrid','onsite'] %}<label class="check"><input type="checkbox" name="work_modes" value="{{ m }}" {{ 'checked' if m in pr.work_modes }}> {{ m }}</label>{% endfor %}</div>
-    <div><label>Job type</label>{% for t in ['internship','full-time','part-time','contract'] %}<label class="check"><input type="checkbox" name="job_types" value="{{ t }}" {{ 'checked' if t in pr.job_types }}> {{ t }}</label>{% endfor %}</div></div>
-  <div class="row"><div><label>Expected salary</label><input type="text" name="expected_salary" value="{{ pr.expected_salary }}"></div>
-    <div><label>Notice period</label><input type="text" name="notice_period" value="{{ pr.notice_period }}"></div>
-    <div><label>Available from</label><input type="text" name="availability" value="{{ pr.availability }}"></div></div>
-  <div class="row"><div><label>Salary floor, software (LPA)</label><input type="number" step="0.5" min="0" name="floor_sw" value="{{ pr.salary_floor_lpa.get('software', 0) }}"></div>
-    <div><label>Salary floor, other (LPA)</label><input type="number" step="0.5" min="0" name="floor_other" value="{{ pr.salary_floor_lpa.get('other', 0) }}"></div>
-    <div><label>Max years of experience a job may ask</label><input type="number" min="0" name="max_years" value="{{ pr.max_years_required }}"></div>
-    <div><label>Smallest company size</label><input type="number" min="1" name="size_min" value="{{ pr.company_size_min }}"></div></div>
-  <label>Companies to skip <span class="hint">comma separated, e.g. service firms you don't want</span></label><input type="text" name="service_firms" value="{{ pr.service_firms|join(', ') }}">
+  <div class="row"><div><label for="f-roles">Roles <span class="hint">comma separated</span></label><input id="f-roles" type="text" name="roles" value="{{ pr.roles|join(', ') }}"></div>
+    <div><label for="f-locations">Locations</label><input id="f-locations" type="text" name="locations" value="{{ pr.locations|join(', ') }}"></div>
+    <div><label for="f-industries">Industries</label><input id="f-industries" type="text" name="industries" value="{{ pr.industries|join(', ') }}"></div></div>
+  <div class="row"><fieldset class="group"><legend>Work mode</legend>{% for m in ['remote','hybrid','onsite'] %}<label class="check"><input type="checkbox" name="work_modes" value="{{ m }}" {{ 'checked' if m in pr.work_modes }}> {{ m }}</label>{% endfor %}</fieldset>
+    <fieldset class="group"><legend>Job type</legend>{% for t in ['internship','full-time','part-time','contract'] %}<label class="check"><input type="checkbox" name="job_types" value="{{ t }}" {{ 'checked' if t in pr.job_types }}> {{ t }}</label>{% endfor %}</fieldset></div>
+  <div class="row"><div><label for="f-expected_salary">Expected salary</label><input id="f-expected_salary" type="text" name="expected_salary" value="{{ pr.expected_salary }}"></div>
+    <div><label for="f-notice_period">Notice period</label><input id="f-notice_period" type="text" name="notice_period" value="{{ pr.notice_period }}"></div>
+    <div><label for="f-availability">Available from</label><input id="f-availability" type="text" name="availability" value="{{ pr.availability }}"></div></div>
+  <div class="row"><div><label for="f-floor_sw">Salary floor, software (LPA)</label><input id="f-floor_sw" type="number" step="0.5" min="0" name="floor_sw" value="{{ pr.salary_floor_lpa.get('software', 0) }}"></div>
+    <div><label for="f-floor_other">Salary floor, other (LPA)</label><input id="f-floor_other" type="number" step="0.5" min="0" name="floor_other" value="{{ pr.salary_floor_lpa.get('other', 0) }}"></div>
+    <div><label for="f-max_years">Max years of experience a job may ask</label><input id="f-max_years" type="number" min="0" name="max_years" value="{{ pr.max_years_required }}"></div>
+    <div><label for="f-size_min">Smallest company size</label><input id="f-size_min" type="number" min="1" name="size_min" value="{{ pr.company_size_min }}"></div></div>
+  <label for="f-service_firms">Companies to skip <span class="hint">comma separated, e.g. service firms you don't want</span></label><input id="f-service_firms" type="text" name="service_firms" value="{{ pr.service_firms|join(', ') }}">
   <div class="actions"><button class="btn">Save</button></div>
 </form>
 <form class="card" id="sections" method="post" action="/profile/sections">{{ csrf_field(csrf) }}

@@ -11,14 +11,14 @@
 {% for a, j in waiting_rows %}{% set pol, automated, lv = info[a.id] %}
 <div class="card wait"><div class="row" style="align-items:start"><div style="flex:3"><a href="/jobs/{{ j.id }}"><b>{{ j.title }}</b></a> · {{ j.company }} <span class="badge b-queued">{{ a.state }}</span>
   <p class="small">{{ a.blocker }}</p>{% if a.error %}<p class="small muted">{{ a.error }}</p>{% endif %}</div>
-  <div class="actions" style="flex:none;margin:0"><a class="btn sm ghost" href="{{ (j.apply_url or j.url)|safe_url }}" target="_blank" rel="noopener noreferrer">Open job ↗</a>
+  <div class="actions" style="flex:0 1 auto;margin:0"><a class="btn sm ghost" href="{{ (j.apply_url or j.url)|safe_url }}" target="_blank" rel="noopener noreferrer">Open job ↗</a>
     {% if lv %}<a class="btn sm ghost" href="/letters/{{ j.id }}/pdf">Cover letter PDF</a>{% endif %}
     {% if a.state == 'Awaiting User' and not a.pending %}<form class="inline" method="post" action="/applications/{{ a.id }}/retry">{{ csrf_field(csrf) }}<button class="btn sm">Retry</button></form>{% endif %}
     <form class="inline" method="post" action="/applications/{{ a.id }}/confirm">{{ csrf_field(csrf) }}<button class="btn sm ok" data-confirm="Only confirm if the site shows your application as sent. Record it as submitted?">I submitted it</button></form></div></div>
   {% if a.pending %}<form method="post" action="/applications/{{ a.id }}/answer">{{ csrf_field(csrf) }}
-    {% for q in a.pending %}<label>{{ q.question }}{% if q.sensitive %} <span class="badge b-flag">sensitive</span>{% endif %}</label>
-      {% if q.options %}<select name="a_{{ loop.index0 }}"><option value="">choose…</option>{% for o in q.options %}<option>{{ o }}</option>{% endfor %}</select>
-      {% else %}<input type="text" name="a_{{ loop.index0 }}">{% endif %}{% endfor %}
+    {% for q in a.pending %}<label for="f{{ a.id }}-a_{{ loop.index0 }}">{{ q.question }}{% if q.sensitive %} <span class="badge b-flag">sensitive</span>{% endif %}</label>
+      {% if q.options %}<select id="f{{ a.id }}-a_{{ loop.index0 }}" name="a_{{ loop.index0 }}"><option value="">choose…</option>{% for o in q.options %}<option>{{ o }}</option>{% endfor %}</select>
+      {% else %}<input type="text" id="f{{ a.id }}-a_{{ loop.index0 }}" name="a_{{ loop.index0 }}">{% endif %}{% endfor %}
     <p class="hint">Your answers are saved to Answers and reused next time.</p>
     <div class="actions"><button class="btn">Save answers and continue</button></div></form>{% endif %}
 </div>{% endfor %}{% endif %}

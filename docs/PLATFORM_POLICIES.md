@@ -11,7 +11,9 @@
 | Test board (local) | Ours | Automated | Automated (used by the test suite) |
 
 Rules the app enforces on every platform:
-- No CAPTCHA, OTP or verification bypass. When one appears the run pauses with state **Awaiting User**.
+- No CAPTCHA, OTP or verification bypass. When a challenge is shown (challenge wording, a visible "I am not a robot" box or a
+  challenge popup), the run pauses with state **Awaiting User**. A "protected by reCAPTCHA" notice or an invisible check is not a
+  challenge and does not pause the run; if the site shows a challenge after Submit, the application becomes **Submission Unconfirmed**.
 - No stealth flags, fingerprint changes or proxies. The browser runs with its sandbox on.
 - One browser task at a time, with platform-specific delays and a daily application limit.
 

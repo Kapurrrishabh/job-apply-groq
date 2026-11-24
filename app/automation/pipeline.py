@@ -137,6 +137,10 @@ def run_one(s, user_id: int, a: db.Application, browser, execution_id: int) -> s
             S.move(a, S.SUBMITTED, submitted_at=db.now(), reference=verdict.reference)
             snapshot(s, a, answered=res.answers)
             emit(f"Submitted: {verdict.detail}", level="success", status="completed", operation="verify")
+        elif browser.barrier():
+            browser.window("normal")
+            S.move(a, S.UNCONFIRMED, blocker=f"The site showed a {browser.barrier()} step after Submit. Complete it in the app's browser window, "
+                                            "then press 'I submitted it' once the site confirms.")
         else:
             S.move(a, S.UNCONFIRMED, blocker="No confirmation was found. Check the site; press 'I submitted it' only if it went through.")
             emit(f"Submission unconfirmed: {verdict.detail}", level="warn", status="completed", operation="verify")

@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 
 from .. import db, jobs, letters, profile as profiles
-from ..platforms import PLATFORMS
 
 
 class SearchJobs(BaseModel):

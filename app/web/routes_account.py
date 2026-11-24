@@ -1,6 +1,6 @@
 """Sign-up, sign-in, settings (Groq key, model, limits, ranking weights), legacy import, diagnostics."""
 from fastapi import Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select, text
 
 from .. import auth, config, db, events, legacy, site_sessions
@@ -77,7 +77,7 @@ async def save_settings(request: Request, ctx: Ctx = CTX):
     if f.get("model") not in MODELS: return back("/settings", "Unknown model", "err")
     try:
         st.model, st.temperature = f["model"], min(max(float(f.get("temperature", 0.2)), 0.0), 1.0)
-        st.max_tokens, st.min_score = min(max(int(f.get("max_tokens", 2000)), 256), 8000), min(max(int(f.get("min_score", 60)), 0), 100)
+        st.max_tokens, st.min_score = min(max(int(f.get("max_tokens", config.DEFAULT_MAX_TOKENS)), 256), 8000), min(max(int(f.get("min_score", 60)), 0), 100)
         st.daily_limit, st.letter_style = min(max(int(f.get("daily_limit", 15)), 1), 50), f.get("letter_style", "professional")
         st.weights = {k: max(0.0, float(f.get(f"w_{k}", v))) for k, v in DEFAULT_WEIGHTS.items()}
     except ValueError:
@@ -104,7 +104,7 @@ def delete_key(ctx: Ctx = CTX):
 
 @app.post("/settings/import-legacy")
 def import_legacy(ctx: Ctx = CTX):
-    if not legacy.available(): return back("/settings", "No earlier data folder found", "err")
+    if not legacy.available(): return back("/settings", "No earlier data to import: none was found, or another account already imported it", "err")
     done = ctx.s.scalar(select(func.count(db.ProfileVersion.id)).where(db.ProfileVersion.user_id == ctx.uid))
     if done: return back("/settings", "Your account already has a profile; the earlier data was not imported again", "err")
     with events.step(ctx.s, ctx.uid, "legacy.import", "Importing data from the earlier version"):

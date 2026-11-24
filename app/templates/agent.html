@@ -3,7 +3,7 @@
 <h1>Agent</h1>
 <p class="sub">Tell the Groq agent what to look for. It can search, rank, write cover letters and shortlist jobs. It can never submit an application; that stays your click on the Queue page.</p>
 <form class="card" method="post" action="/agent">{{ csrf_field(csrf) }}
-  <label>What should it do?</label><textarea name="prompt" style="min-height:90px;font-family:inherit;font-size:15px" placeholder="Find ML and backend internships in Bangalore or remote, rank them, and shortlist the 5 best."></textarea>
+  <label for="f-prompt">What should it do?</label><textarea id="f-prompt" name="prompt" style="min-height:90px;font-family:inherit;font-size:15px" placeholder="Find ML and backend internships in Bangalore or remote, rank them, and shortlist the 5 best."></textarea>
   <div class="actions"><button class="btn">Run agent</button><a class="btn ghost" href="/skills">What it can use</a></div></form>
 <div class="card"><h2>Recent agent runs</h2><table>{% for r in runs %}<tr><td>#{{ r.id }}</td><td class="small">{{ r.params.prompt[:140] }}</td><td><span class="badge b-{{ 'pass' if r.status == 'completed' else 'fail' if r.status == 'failed' else 'flag' }}">{{ r.status }}</span></td><td class="small">{{ r.summary[:200] }}</td></tr>
 {% else %}<tr><td class="empty">No runs yet.</td></tr>{% endfor %}</table></div>

@@ -2,8 +2,8 @@
 {% block body %}
 <h1>My applications</h1>
 <p class="sub">Every application with what was actually sent. "Submitted" means the site confirmed it, or you did.</p>
-<form class="card" method="get" action="/applications"><div class="row"><div style="flex:3"><label>Search</label><input type="text" name="q" value="{{ q }}" placeholder="title or company"></div>
-  <div><label>State</label><select name="state"><option value="">all</option>{% for st in states %}<option {{ 'selected' if st == state }}>{{ st }}</option>{% endfor %}</select></div>
+<form class="card" method="get" action="/applications"><div class="row"><div style="flex:3"><label for="f-q">Search</label><input id="f-q" type="text" name="q" value="{{ q }}" placeholder="title or company"></div>
+  <div><label for="f-state">State</label><select id="f-state" name="state"><option value="">all</option>{% for st in states %}<option {{ 'selected' if st == state }}>{{ st }}</option>{% endfor %}</select></div>
   <div style="flex:none"><button class="btn ghost">Filter</button></div></div></form>
 <div class="card"><table><tr><th>Job</th><th>State</th><th>Submitted</th><th>Evidence</th></tr>
 {% for a, j in rows %}<tr><td><a href="/applications/{{ a.id }}"><b>{{ j.title }}</b></a><br><span class="small muted">{{ j.company }} · {{ j.platform }}</span></td>

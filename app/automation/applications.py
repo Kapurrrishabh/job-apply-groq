@@ -50,6 +50,13 @@ def authorize(s, user_id: int, app_ids: list[int]):
     return ex
 
 
+def release(s, user_id: int, app_ids: list[int]) -> None:
+    """Applications a stopped or failed run never reached go back to the shortlist instead of sitting in Queued."""
+    for aid in app_ids:
+        a = get(s, user_id, aid)
+        if a.state == S.QUEUED: S.move(a, S.SELECTED, blocker="Not sent: the run stopped before reaching it. Apply again when ready.")
+
+
 def answer_pending(s, user_id: int, app_id: int, replies: dict[int, str]) -> None:
     from . import worker
     a = get(s, user_id, app_id)

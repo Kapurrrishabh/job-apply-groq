@@ -1,6 +1,5 @@
 """Cover Letter Studio: Groq drafts per job, evidence check against the profile, versions, paragraph regeneration,
 PDF export (fpdf2, so no TeX is needed)."""
-import json
 import re
 from pathlib import Path
 from pydantic import BaseModel
@@ -28,15 +27,25 @@ class OneParagraph(BaseModel):
     paragraph: str
 
 
-def numbers(text: str) -> set[str]:
-    return {m.group(0).rstrip("+").lower() for m in re.finditer(r"\d+(?:[.,]\d+)?[kKmM%]?\+?", text or "")}
+NUMBER = re.compile(r"\d+(?:[.,]\d+)*\s?[kKmM%]?\+?")
+
+
+def _value(token: str) -> float:
+    """'12k', '12,000' and '12000' are the same claim; so are '40%' and '40'."""
+    t = token.lower().replace(",", "").replace(" ", "").rstrip("+%")
+    scale = {"k": 1e3, "m": 1e6}.get(t[-1:], 1)
+    return float(t.rstrip("km")) * scale
+
+
+def numbers(text: str) -> set[float]:
+    return {_value(m.group(0)) for m in NUMBER.finditer(text or "")}
 
 
 def check(paragraphs: list[str], profile: profiles.Profile, job: db.Job) -> list[str]:
     """Evidence problems: numbers that are in neither the profile nor the posting, hype words, em-dashes."""
     allowed = numbers(profile.model_dump_json()) | numbers(f"{job.title} {job.description}")
     text = "\n".join(paragraphs)
-    issues = [f"'{n}' is not in your profile or the posting" for n in sorted(numbers(text) - allowed)]
+    issues = [f"'{n}' is not in your profile or the posting" for n in sorted({m.group(0).strip() for m in NUMBER.finditer(text) if _value(m.group(0)) not in allowed})]
     issues += [f"hype word '{m.group(0)}'" for m in HYPE.finditer(text)]
     if "—" in text: issues.append("contains an em-dash")
     return issues

@@ -84,7 +84,7 @@ class UserSettings(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     model: Mapped[str] = mapped_column(String(100), default=config.DEFAULT_MODEL)
     temperature: Mapped[float] = mapped_column(Float, default=0.2)
-    max_tokens: Mapped[int] = mapped_column(Integer, default=2000)
+    max_tokens: Mapped[int] = mapped_column(Integer, default=config.DEFAULT_MAX_TOKENS)
     weights: Mapped[dict] = mapped_column(JSON, default=dict)
     min_score: Mapped[int] = mapped_column(Integer, default=60)
     daily_limit: Mapped[int] = mapped_column(Integer, default=15)

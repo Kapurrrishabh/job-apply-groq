@@ -16,8 +16,8 @@
 <div class="grid g2">
 <div class="card"><h2>How you match</h2>
   {% if sc %}{% set r = sc.result %}
-  <div class="row" style="align-items:center"><div style="flex:none"><div class="stat">{{ sc.score }}</div><div class="stat-label">{{ sc.recommendation }} · {{ sc.confidence }} confidence</div></div>
-    <div><table>{% for name, d in r.dimensions.items() %}<tr><td class="small"><b>{{ name }}</b><div class="muted">{{ d.basis }}</div></td><td style="width:120px">{% if d.score is not none %}<div class="bar"><i style="width:{{ d.score }}%"></i></div><span class="small">{{ d.score }}</span>{% else %}<span class="small muted">no info</span>{% endif %}</td></tr>{% endfor %}</table></div></div>
+  <p><span class="stat">{{ sc.score }}</span> <span class="stat-label">/ 100 · {{ sc.recommendation }} · {{ sc.confidence }} confidence</span></p>
+    <div><table>{% for name, d in r.dimensions.items() %}<tr><td class="small"><b>{{ name }}</b><div class="muted">{{ d.basis }}</div></td><td style="width:120px">{% if d.score is not none %}<div class="bar"><i style="width:{{ d.score }}%"></i></div><span class="small">{{ d.score }}</span>{% else %}<span class="small muted">no info</span>{% endif %}</td></tr>{% endfor %}</table></div>
   {% if r.strengths %}<h3>Strengths</h3><ul class="reasons">{% for x in r.strengths %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
   {% if r.gaps %}<h3>Gaps</h3><ul class="reasons">{% for x in r.gaps %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
   {% if r.requirements_missing %}<h3>Requirements you don't show</h3><p class="small muted">{{ r.requirements_missing|join(', ') }}</p>{% endif %}

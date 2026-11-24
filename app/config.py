@@ -4,6 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL = "openai/gpt-oss-120b"
+# gpt-oss spends part of this budget on hidden reasoning: a cover letter used up to ~2,000 tokens (measured 2026-11-24).
+DEFAULT_MAX_TOKENS = 6000
 SESSION_DAYS = 14                 # web login lifetime
 SITE_LOGIN_HOURS = 48             # site cookies that are session-only are kept at least this long
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024

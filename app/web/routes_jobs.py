@@ -1,11 +1,11 @@
 """Job Search, Ranked Jobs, Job Details, saved searches and imports."""
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 
-from .. import db, events, jobs, letters
+from .. import db, jobs, letters
 from ..automation import applications, worker
-from ..platforms import PLATFORMS
+from ..platforms import PLATFORMS, offered
 from .core import CTX, Ctx, app, back, page
 
 PAGE = 25
@@ -35,7 +35,7 @@ def jobs_page(request: Request, q: str = "", platform: str = "", verdict: str = 
     saved = list(ctx.s.scalars(select(db.SavedSearch).where(db.SavedSearch.user_id == ctx.uid, db.SavedSearch.saved.is_(True)).order_by(db.SavedSearch.name)))
     from .. import profile as profiles
     p, _ = profiles.current(ctx.s, ctx.uid)
-    return page(request, "jobs.html", ctx, items=items, total=total, pg=pg, pages=max(1, -(-total // PAGE)), platforms=PLATFORMS,
+    return page(request, "jobs.html", ctx, items=items, total=total, pg=pg, pages=max(1, -(-total // PAGE)), platforms=offered(),
                 f=dict(q=q, platform=platform, verdict=verdict, min_score=min_score, mode=mode, jtype=jtype, sort=sort, bookmarked=bookmarked),
                 history=history, saved=saved, roles=p.preferences.roles, locations=p.preferences.locations)
 
@@ -43,7 +43,7 @@ def jobs_page(request: Request, q: str = "", platform: str = "", verdict: str = 
 @app.post("/jobs/search")
 def start_search(platform: str = Form("freehire"), query: str = Form(...), location: str = Form("India"), days: int = Form(14),
                  save: str = Form(""), ctx: Ctx = CTX):
-    if platform not in PLATFORMS or PLATFORMS[platform].discovery not in ("api", "test"):
+    if platform not in offered() or PLATFORMS[platform].discovery not in ("api", "test"):
         return back("/jobs", f"{PLATFORMS.get(platform, PLATFORMS['other']).name} jobs are imported, not searched", "err")
     qs = [x.strip() for x in query.split(",") if x.strip()][:5]
     for qy in qs:

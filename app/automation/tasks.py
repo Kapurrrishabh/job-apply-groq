@@ -1,8 +1,8 @@
 """What each execution kind does. Each handler gets (session, execution, cancelled()) and returns a summary."""
-from .. import db, events, jobs, letters, site_sessions
+from .. import events, jobs, letters, site_sessions
 from ..platforms import PLATFORMS, adapters
 from . import states as S
-from .applications import get
+from .applications import get, release
 from .pipeline import pause_between, run_one
 from .worker import browser_for
 
@@ -10,15 +10,20 @@ from .worker import browser_for
 def apply_batch(s, ex, cancelled):
     ids, done = ex.params["application_ids"], {}
     events.emit(s, ex.user_id, f"Applying to {len(ids)} job(s), one at a time", execution_id=ex.id, operation="apply")
-    for n, aid in enumerate(ids):
-        if cancelled():
-            events.emit(s, ex.user_id, "Stopped by you; the rest stay queued", execution_id=ex.id, level="warn", status="paused"); break
-        a = get(s, ex.user_id, aid)
-        if a.state != S.QUEUED: continue
-        b = browser_for(ex.user_id)
-        state = run_one(s, ex.user_id, a, b, ex.id)
-        done[state] = done.get(state, 0) + 1
-        if n < len(ids) - 1: pause_between(a.platform, cancelled)
+    try:
+        for n, aid in enumerate(ids):
+            if cancelled():
+                events.emit(s, ex.user_id, "Stopped by you; the rest are back on your shortlist", execution_id=ex.id, level="warn", status="paused"); break
+            a = get(s, ex.user_id, aid)
+            if a.state != S.QUEUED: continue
+            b = browser_for(ex.user_id)
+            state = run_one(s, ex.user_id, a, b, ex.id)
+            done[state] = done.get(state, 0) + 1
+            if n < len(ids) - 1: pause_between(a.platform, cancelled)
+    except Exception:
+        s.rollback(); raise
+    finally:
+        release(s, ex.user_id, ids); s.commit()
     return ", ".join(f"{v} {k}" for k, v in done.items()) or "nothing to do"
 
 

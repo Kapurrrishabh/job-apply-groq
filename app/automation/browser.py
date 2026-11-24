@@ -5,13 +5,17 @@ from playwright.sync_api import sync_playwright
 from .. import config
 
 SUBMIT = re.compile(r"\b(submit|send application|finish application|complete application)\b", re.I)
-BARRIER = re.compile(r"(?i)captcha|verify you are (a )?human|are you a robot|one.time password|\botp\b|enter the code|security check|two.step")
+# Challenge wording only: "protected by reCAPTCHA" notices and invisible checks are not something you must do.
+BARRIER = re.compile(r"(?i)(complete|solve) the captcha|captcha (is )?required|verify (that )?you are (a )?human|are you a robot|one.time password|"
+                     r"\botp\b|enter the (verification )?code|security check|two.step verification")
+CHALLENGE_FRAMES = ("iframe[src*='recaptcha'][src*='anchor']:not([src*='size=invisible']), iframe[src*='recaptcha'][src*='bframe'], "
+                    "iframe[src*='hcaptcha'], iframe[src*='challenges.cloudflare']")
 
 FIELDS_JS = r"""() => {
   const out = [];
   const text = el => (el ? (el.innerText || el.textContent || '').trim() : '');
   document.querySelectorAll('input, select, textarea, button, [role=combobox], [role=radio], [role=checkbox]').forEach((el, i) => {
-    if (el.type === 'hidden') return;
+    if (el.type === 'hidden' || el.getAttribute('aria-hidden') === 'true') return;   // helpers people never see
     const r = el.getBoundingClientRect();
     if (!(r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden') && el.type !== 'file') return;
     el.setAttribute('data-ajs', String(i));
@@ -93,8 +97,9 @@ class Browser:
         t = self.text(20000)
         m = BARRIER.search(t)
         if m: return m.group(0)
-        if self.p().query_selector("iframe[src*='recaptcha'], iframe[src*='hcaptcha'], iframe[src*='challenges.cloudflare']"):
-            return "CAPTCHA"
+        for frame in self.p().query_selector_all(CHALLENGE_FRAMES):
+            box = frame.bounding_box()
+            if frame.is_visible() and box and box["width"] > 50 and box["height"] > 50: return "CAPTCHA"
         return None
 
     def fields(self) -> list[dict]:

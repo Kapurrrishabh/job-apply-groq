@@ -10,7 +10,7 @@
   {% if (a.evidence or {}).get('url') %}<p class="small muted">Page: {{ a.evidence.url }}</p>{% endif %}
   {% if shot %}<img class="shot" src="/applications/{{ a.id }}/evidence.png" alt="Confirmation page screenshot">{% endif %}
   {% if a.error %}<p class="small"><b>Error:</b> {{ a.error }}</p>{% endif %}
-  {% if a.state == 'Submission Unconfirmed' %}<form method="post" action="/applications/{{ a.id }}/confirm">{{ csrf_field(csrf) }}<label>What you saw on the site (optional)</label><input type="text" name="note">
+  {% if a.state == 'Submission Unconfirmed' %}<form method="post" action="/applications/{{ a.id }}/confirm">{{ csrf_field(csrf) }}<label for="f-note">What you saw on the site (optional)</label><input id="f-note" type="text" name="note">
     <div class="actions"><button class="btn ok" data-confirm="Record as submitted?">I checked: it was submitted</button></div></form>{% endif %}</div>
 <div class="card"><h2>What was sent</h2>
   {% if snap %}<p class="small">Profile version {{ snap.profile_version }}{% if snap.score is not none %} · score {{ snap.score }}{% endif %}</p>

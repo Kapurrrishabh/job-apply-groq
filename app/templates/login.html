@@ -4,8 +4,8 @@
   <div class="logo dark">job-apply<span>·groq</span></div>
   <h1>Sign in</h1>
   <input type="hidden" name="next" value="{{ request.query_params.get('next', '/') }}">
-  <label>Email</label><input type="email" name="email" required autofocus>
-  <label>Password</label><input type="password" name="password" required>
+  <label for="f-email">Email</label><input id="f-email" type="email" name="email" required autofocus>
+  <label for="f-password">Password</label><input id="f-password" type="password" name="password" required>
   <div class="actions"><button class="btn">Sign in</button><a href="/register">Create an account for someone else</a></div>
 </form>
 {% endblock %}

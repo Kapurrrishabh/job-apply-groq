@@ -2,7 +2,6 @@
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Callable
 
 import httpx
 
@@ -52,6 +51,8 @@ class GroqProvider:
                 if attempt == self.retries:
                     raise LLMError("rate_limit" if r.status_code == 429 else "server", f"Groq returned {r.status_code} after {self.retries + 1} tries")
                 time.sleep(min(float(r.headers.get("retry-after") or delay), 60)); delay = min(delay * 2, 30); continue
+            if r.status_code >= 400 and (r.json().get("error") or {}).get("code") == "json_validate_failed":
+                raise LLMError("invalid_output", "Groq could not produce valid JSON for this answer")
             if r.status_code >= 400:
                 raise LLMError("bad_request", f"Groq returned {r.status_code}: {r.json().get('error', {}).get('message', '')[:300]}")
             data = r.json(); msg = data["choices"][0]["message"]; usage = data.get("usage") or {}

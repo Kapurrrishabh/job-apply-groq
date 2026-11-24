@@ -87,8 +87,9 @@ def test_profile_basics_save_as_a_new_version(web):
 
 def test_bad_yaml_does_not_change_the_profile(web):
     u = web()
-    r = u.post("/profile/sections", data={"text": "education: [unclosed"})
-    assert "kind=err" in str(r.url) and "Version 0" in u.get("/profile").text
+    r = u.post("/profile/sections", data={"text": "education: [unclosed"}, follow_redirects=False)
+    assert r.headers["location"].startswith("/profile?msg=Not") and r.headers["location"].endswith("#sections")
+    assert "Version 0" in u.get("/profile").text
 
 
 def test_answers_save_and_match(web):
@@ -183,3 +184,88 @@ def test_database_is_backed_up_before_a_migration(monkeypatch, instance):
     with db.engine.begin() as conn:
         assert conn.execute(text("PRAGMA user_version")).scalar() == 2
     assert list((instance / "backups").glob("jobapply-v1-*.db"))
+
+
+def test_every_template_link_and_form_has_a_route():
+    """A button pointing at a route that doesn't exist only shows up when someone clicks it."""
+    import re
+    from pathlib import Path
+    from starlette.routing import Match
+    templates = Path(__file__).resolve().parent.parent / "app" / "templates"
+    broken = []
+    for f in templates.glob("*.html"):
+        html = f.read_text()
+        targets = [("GET" if 'method="get"' in tag else "POST", url) for tag, url in re.findall(r'(<form[^>]*?action="(/[^"#?]*)")', html)]
+        targets += [("POST", url) for url in re.findall(r'formaction="(/[^"#?]*)', html)]
+        targets += [("GET", url) for url in re.findall(r'(?:href|src)="(/[^"#?]*)', html)]
+        for verb, url in targets:
+            path = re.sub(r"\{\{.*?\}\}|\{%.*?%\}", "1", url)
+            if path.startswith("/static/"): continue
+            scope = {"type": "http", "path": path, "method": verb}
+            if not any(r.matches(scope)[0] == Match.FULL for r in app.routes): broken.append(f"{f.name}: {verb} {url}")
+    assert broken == []
+
+
+def test_every_label_is_linked_to_its_field():
+    """Unlinked labels can't be clicked and aren't read out by screen readers."""
+    import re
+    from pathlib import Path
+    loose = []
+    for f in (Path(__file__).resolve().parent.parent / "app" / "templates").glob("*.html"):
+        html = f.read_text()
+        for m in re.finditer(r"<label(?P<attrs>[^>]*)>(?P<body>.*?)</label>", html, re.S):
+            if "for=" not in m["attrs"] and not re.search(r"<(input|select|textarea)", m["body"]): loose.append(f"{f.name}: {m['body'][:40]}")
+            target = re.search(r'for="([^"]+)"', m["attrs"])
+            if target and f'id="{target[1]}"' not in html[m.end():].split("<label")[0]:
+                loose.append(f"{f.name}: '{m['body'][:30]}' is not followed by its field")
+        ids = re.findall(r'\bid="([^"{]+)"', html)
+        loose += [f"{f.name}: duplicate id {i}" for i in set(ids) if ids.count(i) > 1]
+    assert loose == []
+
+
+def test_test_board_is_hidden_from_real_users(web):
+    u = web()
+    assert "Test board" not in u.get("/jobs").text
+    r = u.post("/jobs/search", data={"platform": "testboard", "query": "intern"})
+    assert "kind=err" in str(r.url)
+
+
+def test_earlier_data_is_imported_into_one_account_only(tmp_path, monkeypatch):
+    from app import auth, config, legacy
+    monkeypatch.setattr(config, "ROOT", tmp_path)       # never the real data/, .env or browser profile
+    (tmp_path / "data").mkdir(); (tmp_path / "data" / "profile.yaml").write_text("identity:\n  name: Old Me\n")
+    s = db.session(); u = auth.register(s, "old@example.com", "Old Me", "0123456789"); s.flush()
+    assert legacy.available()
+    legacy.run(s, u.id)
+    assert not legacy.available() and profiles_name(s, u.id) == "Old Me"
+
+
+def profiles_name(s, uid):
+    from app import profile as profiles
+    return profiles.current(s, uid)[0].personal.name
+
+
+def _tex():
+    import shutil
+    from pathlib import Path
+    return shutil.which("lualatex") or Path("/Library/TeX/texbin/lualatex").exists()
+
+
+@pytest.mark.skipif(not _tex(), reason="needs TeX (lualatex) installed")
+def test_tailored_cv_is_one_page_and_waits_for_approval(web, groq, profile_data):
+    from pypdf import PdfReader
+    from app import profile as profiles, resumes
+    from app.automation import worker
+    u = web(); s = db.session(); profiles.save(s, 1, profiles.Profile.model_validate(profile_data), "manual"); s.commit(); s.close()
+    jid = str(u.post("/jobs/import", data={"title": "ML Intern", "company": "Acme", "description": "PyTorch and RAG"}).url).split("/jobs/")[1].split("?")[0]
+    groq.routes["tailor a one-page cv"] = {"profile_line": "CS student building RAG and vision systems.",
+                                           "competencies": [{"label": "ML", "items": "PyTorch, RAG"}],
+                                           "sections": [{"id": "acme", "bullet_ids": ["acme-2", "acme-1"]}, {"id": "vision", "bullet_ids": ["vision-1"]}]}
+    u.post(f"/jobs/{jid}/tailor"); worker.run_pending_now(240)
+    s = db.session(); r = resumes.tailored_for(s, 1, int(jid))
+    assert r and not r.approved and len(PdfReader(str(resumes.path(r))).pages) == 1
+    assert "Built a RAG search over 12k documents" in r.text
+    page = u.get(f"/resumes/{r.id}").text
+    assert "What changed from your profile" in page and "Approve for applications" in page
+    u.post(f"/resumes/{r.id}/approve")
+    assert "(tailored)" in u.get(f"/jobs/{jid}").text

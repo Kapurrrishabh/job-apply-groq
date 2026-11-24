@@ -4,7 +4,6 @@ import json
 from typing import Callable, TypeVar
 
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import select
 
 from .. import db, events
 from . import keys
@@ -70,7 +69,9 @@ def structured(s, user_id: int, purpose: str, system: str, user: str, model_cls:
         try:
             reply = p.chat(messages, model=st.model, temperature=st.temperature, max_tokens=st.max_tokens, schema=schema)
         except LLMError as e:
-            _record(s, user_id, st.model, purpose, None, f"{e.kind}: {e}"); raise
+            _record(s, user_id, st.model, purpose, None, f"{e.kind}: {e}")
+            if e.kind == "invalid_output" and not attempt: continue
+            raise
         try:
             out = model_cls.model_validate_json(reply.content)
             _record(s, user_id, st.model, purpose, reply); return out

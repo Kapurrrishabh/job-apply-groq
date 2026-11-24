@@ -3,8 +3,8 @@
 <h1>Resumes</h1>
 <p class="sub">PDF or Word, up to 5 MB. The default resume is attached to applications unless you pick another.</p>
 <form class="card" method="post" action="/resumes/upload" enctype="multipart/form-data">{{ csrf_field(csrf) }}
-  <div class="row"><div style="flex:2"><label>File</label><input type="file" name="file" accept=".pdf,.docx" required></div>
-    <div><label>Label</label><input type="text" name="label" placeholder="e.g. ML internship CV"></div>
+  <div class="row"><div style="flex:2"><label for="f-file">File</label><input id="f-file" type="file" name="file" accept=".pdf,.docx" required></div>
+    <div><label for="f-label">Label</label><input id="f-label" type="text" name="label" placeholder="e.g. ML internship CV"></div>
     <div style="flex:none"><button class="btn">Upload</button></div></div></form>
 <div class="card"><table><tr><th>Resume</th><th>Kind</th><th>Size</th><th>Added</th><th></th></tr>
 {% for r in items %}<tr><td><a href="/resumes/{{ r.id }}"><b>{{ r.label }}</b></a> {% if r.is_default %}<span class="badge b-pass">default</span>{% endif %}{% if not r.approved %}<span class="badge b-flag">needs approval</span>{% endif %}</td>

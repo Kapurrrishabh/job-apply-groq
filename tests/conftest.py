@@ -1,7 +1,11 @@
 """Every test gets its own instance folder, database and master key, so nothing touches instance/ or .env."""
 import json
 import re
+import socket
+import threading
+import time
 import pytest
+import uvicorn
 from cryptography.fernet import Fernet
 
 from app import db
@@ -109,3 +113,23 @@ def web():
         return Browserless(c)
     yield make
     for c in clients: c.__exit__(None, None, None)
+
+
+def serve(asgi_app) -> tuple[str, uvicorn.Server, threading.Thread]:
+    """Run an ASGI app on a free 127.0.0.1 port in a background thread."""
+    sock = socket.socket(); sock.bind(("127.0.0.1", 0)); port = sock.getsockname()[1]; sock.close()
+    srv = uvicorn.Server(uvicorn.Config(asgi_app, host="127.0.0.1", port=port, log_level="warning"))
+    t = threading.Thread(target=srv.run, daemon=True); t.start()
+    for _ in range(200):
+        if srv.started: break
+        time.sleep(0.05)
+    assert srv.started, "test server did not start"
+    return f"http://127.0.0.1:{port}", srv, t
+
+
+@pytest.fixture(scope="session")
+def board_url():
+    import mock_board
+    url, srv, t = serve(mock_board.app)
+    yield url
+    srv.should_exit = True; t.join(5)
