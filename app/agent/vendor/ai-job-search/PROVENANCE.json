@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/ai-job-search-dev/ai-job-search",
+  "commit": "83c788d779b74522bb346145ef675b984bf2d3f7",
+  "license": "MIT",
+  "vendored_on": "2026-11-24",
+  "files": "Skill metadata and Markdown guidance copied with git show from the upstream commit; no third-party code is executed"
+}

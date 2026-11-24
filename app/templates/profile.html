@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% block title %}Profile{% endblock %}
+{% block body %}
+<h1>My profile</h1>
+<p class="sub">The single source of truth for every application. Version {{ version }}; every save keeps the earlier version.</p>
+<div class="card"><div class="row" style="align-items:center"><div style="flex:3"><div class="bar"><i style="width:{{ pct }}%"></i></div></div><div><b>{{ pct }}% complete</b></div></div>
+  {% if missing %}<p class="small muted">Missing: {{ missing|join(', ') }}</p>{% endif %}
+  <p class="small">Fastest way to fill it: <a href="/resumes">upload your resume</a> and press <b>Update profile from this resume</b>. Nothing is overwritten without your review.</p></div>
+{% set pe = p.personal %}{% set pr = p.preferences %}
+<form class="card" method="post" action="/profile/basic">{{ csrf_field(csrf) }}
+  <h2>About you</h2>
+  <div class="row"><div><label>Full name</label><input type="text" name="name" value="{{ pe.name }}" required></div>
+    <div><label>Email</label><input type="email" name="email" value="{{ pe.email }}"></div>
+    <div><label>Phone</label><input type="text" name="phone" value="{{ pe.phone }}"></div></div>
+  <div class="row"><div><label>Current city</label><input type="text" name="current_location" value="{{ pe.current_location }}"></div>
+    <div><label>Citizenship</label><input type="text" name="citizenship" value="{{ pe.citizenship }}"></div>
+    <div><label>Address <span class="hint">used only when a form asks</span></label><input type="text" name="address" value="{{ pe.address }}"></div></div>
+  <div class="row"><div><label>LinkedIn</label><input type="text" name="linkedin" value="{{ pe.linkedin }}"></div>
+    <div><label>GitHub</label><input type="text" name="github" value="{{ pe.github }}"></div>
+    <div><label>Portfolio</label><input type="text" name="portfolio" value="{{ pe.portfolio }}"></div></div>
+  <label>Headline</label><input type="text" name="headline" value="{{ pe.headline }}" placeholder="e.g. Final-year CS student building ML systems">
+  <h2 style="margin-top:20px">What you are looking for</h2>
+  <div class="row"><div><label>Roles <span class="hint">comma separated</span></label><input type="text" name="roles" value="{{ pr.roles|join(', ') }}"></div>
+    <div><label>Locations</label><input type="text" name="locations" value="{{ pr.locations|join(', ') }}"></div>
+    <div><label>Industries</label><input type="text" name="industries" value="{{ pr.industries|join(', ') }}"></div></div>
+  <div class="row"><div><label>Work mode</label>{% for m in ['remote','hybrid','onsite'] %}<label class="check"><input type="checkbox" name="work_modes" value="{{ m }}" {{ 'checked' if m in pr.work_modes }}> {{ m }}</label>{% endfor %}</div>
+    <div><label>Job type</label>{% for t in ['internship','full-time','part-time','contract'] %}<label class="check"><input type="checkbox" name="job_types" value="{{ t }}" {{ 'checked' if t in pr.job_types }}> {{ t }}</label>{% endfor %}</div></div>
+  <div class="row"><div><label>Expected salary</label><input type="text" name="expected_salary" value="{{ pr.expected_salary }}"></div>
+    <div><label>Notice period</label><input type="text" name="notice_period" value="{{ pr.notice_period }}"></div>
+    <div><label>Available from</label><input type="text" name="availability" value="{{ pr.availability }}"></div></div>
+  <div class="row"><div><label>Salary floor, software (LPA)</label><input type="number" step="0.5" min="0" name="floor_sw" value="{{ pr.salary_floor_lpa.get('software', 0) }}"></div>
+    <div><label>Salary floor, other (LPA)</label><input type="number" step="0.5" min="0" name="floor_other" value="{{ pr.salary_floor_lpa.get('other', 0) }}"></div>
+    <div><label>Max years of experience a job may ask</label><input type="number" min="0" name="max_years" value="{{ pr.max_years_required }}"></div>
+    <div><label>Smallest company size</label><input type="number" min="1" name="size_min" value="{{ pr.company_size_min }}"></div></div>
+  <label>Companies to skip <span class="hint">comma separated, e.g. service firms you don't want</span></label><input type="text" name="service_firms" value="{{ pr.service_firms|join(', ') }}">
+  <div class="actions"><button class="btn">Save</button></div>
+</form>
+<form class="card" id="sections" method="post" action="/profile/sections">{{ csrf_field(csrf) }}
+  <h2>Education, experience, projects and skills</h2>
+  <p class="hint">Edit as YAML. Keep each bullet exactly as true as it is; cover letters and answers may only use what is written here.</p>
+  <textarea name="text" style="min-height:440px">{{ text }}</textarea>
+  <div class="actions"><button class="btn">Save sections</button></div>
+</form>
+<div class="card"><h2>Version history</h2>
+  <table><tr><th>Version</th><th>Source</th><th>Note</th><th>When</th><th></th></tr>
+  {% for row in versions %}<tr><td>{{ row.version }}{% if row.version == version %} <span class="badge b-pass">current</span>{% endif %}</td><td>{{ row.source }}</td><td class="small">{{ row.note }}</td><td class="small muted">{{ row.created_at.strftime('%b %d %H:%M') }}</td>
+    <td>{% if row.version != version %}<form method="post" action="/profile/restore/{{ row.version }}">{{ csrf_field(csrf) }}<button class="btn sm ghost" data-confirm="Restore version {{ row.version }}? It is saved as a new version.">Restore</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="5" class="empty">No versions yet.</td></tr>{% endfor %}</table></div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block title %}Review import{% endblock %}
+{% block body %}
+<h1>Review what the resume adds</h1>
+<p class="sub">Additions and empty fields are filled automatically. Where the resume disagrees with your profile, your profile is kept unless you tick the box.</p>
+<form class="card" method="post" action="/profile/review">{{ csrf_field(csrf) }}
+  <table><tr><th>Use resume value</th><th>Field</th><th>Change</th><th>In your profile</th><th>In the resume</th></tr>
+  {% for c in changes %}<tr>
+    <td>{% if c.kind == 'conflict' %}<input type="checkbox" name="take" value="{{ loop.index0 }}">{% else %}<span class="badge b-pass">auto</span>{% endif %}</td>
+    <td class="small"><b>{{ c.path }}</b></td><td><span class="badge b-{{ 'flag' if c.kind == 'conflict' else 'new' }}">{{ c.kind }}</span></td>
+    <td class="small muted">{{ c.old or '—' }}</td><td class="small">{{ c.new }}</td></tr>
+  {% else %}<tr><td colspan="5" class="empty">The resume adds nothing new.</td></tr>{% endfor %}</table>
+  <div class="actions"><button class="btn" name="action" value="apply">Save to my profile</button><button class="btn bad" name="action" value="discard">Discard</button>
+    <a class="btn ghost" href="/resumes/{{ resume_id }}">See the resume</a></div>
+</form>
+{% endblock %}

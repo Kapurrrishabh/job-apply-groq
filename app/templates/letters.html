@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block title %}Cover Letters{% endblock %}
+{% block body %}
+<h1>Cover letters</h1>
+<p class="sub">One letter per job, with every version kept. Open a job to write a new one.</p>
+<div class="card"><table><tr><th>Job</th><th>Style</th><th>Started</th></tr>
+{% for cl, j in rows %}<tr><td><a href="/letters/{{ j.id }}"><b>{{ j.title }}</b></a><br><span class="small muted">{{ j.company }}</span></td><td class="small">{{ cl.style }}</td><td class="small muted">{{ cl.created_at.strftime('%b %d') }}</td></tr>
+{% else %}<tr><td colspan="3" class="empty">No letters yet. Open a job and press "Write cover letter".</td></tr>{% endfor %}</table></div>
+{% endblock %}

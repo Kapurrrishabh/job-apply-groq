@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block title %}Create account{% endblock %}
+{% block auth %}
+<form class="card auth-card" method="post" action="/register">
+  <div class="logo dark">job-apply<span>·groq</span></div>
+  <h1>Create your account</h1>
+  <p class="small muted">Each person gets their own workspace: profile, resumes, Groq key, site logins and applications stay separate. Everything stays on this computer.</p>
+  <label>Your name</label><input type="text" name="name" required autofocus>
+  <label>Email</label><input type="email" name="email" required>
+  <label>Password <span class="hint">at least 10 characters</span></label><input type="password" name="password" minlength="10" required>
+  <div class="actions"><button class="btn">Create account</button><a href="/login">I already have one</a></div>
+</form>
+{% endblock %}

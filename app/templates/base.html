@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Job Apply{% endblock %} · job-apply-groq</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+{% if user %}
+<div class="layout">
+  <nav class="side">
+    <div class="logo">job-apply<span>·groq</span></div>
+    <a href="/" class="{{ 'on' if nav=='dashboard' }}">🏠 Dashboard</a>
+    <div class="group">Find</div>
+    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job') }}">🔎 Job Search</a>
+    <a href="/agent" class="{{ 'on' if nav=='agent' }}">🤖 Agent</a>
+    <div class="group">Apply</div>
+    <a href="/queue" class="{{ 'on' if nav=='queue' }}">📥 Queue {% if waiting %}<span class="pill">{{ waiting }}</span>{% endif %}</a>
+    <a href="/applications" class="{{ 'on' if nav in ('applications','application') }}">📋 My Applications</a>
+    <a href="/letters" class="{{ 'on' if nav in ('letters','studio') }}">✉️ Cover Letters</a>
+    <div class="group">You</div>
+    <a href="/profile" class="{{ 'on' if nav in ('profile','profile_review') }}">👤 Profile</a>
+    <a href="/resumes" class="{{ 'on' if nav in ('resumes','resume') }}">📄 Resumes</a>
+    <a href="/answers" class="{{ 'on' if nav=='answers' }}">💬 Answers</a>
+    <div class="group">System</div>
+    <a href="/console" class="{{ 'on' if nav=='console' }}">🖥️ Console</a>
+    <a href="/skills" class="{{ 'on' if nav=='skills' }}">🧩 Skills</a>
+    <a href="/settings" class="{{ 'on' if nav=='settings' }}">⚙️ Settings</a>
+    <a href="/diagnostics" class="{{ 'on' if nav=='diagnostics' }}">🩺 Diagnostics</a>
+    <form method="post" action="/logout" class="logout">{{ csrf_field(csrf) }}<button class="btn sm ghost">Sign out {{ user.name.split(' ')[0] }}</button></form>
+  </nav>
+  <main>
+    {% if msg %}<div class="flash {{ kind }}">{{ msg }}</div>{% endif %}
+    {% if not has_key and nav not in ('settings',) %}<div class="banner"><span>Add your free Groq API key to turn on ranking explanations, cover letters and the agent.</span><a class="btn sm" href="/settings">Add key</a></div>{% endif %}
+    {% block body %}{% endblock %}
+  </main>
+</div>
+{% else %}
+<main class="auth">
+  {% if msg %}<div class="flash {{ kind }}">{{ msg }}</div>{% endif %}
+  {% block auth %}{% endblock %}
+</main>
+{% endif %}
+</body>
+</html>

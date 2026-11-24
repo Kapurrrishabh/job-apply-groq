@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block title %}{{ j.title }}{% endblock %}
+{% block body %}
+<p class="small"><a href="/jobs">← Job search</a></p>
+<h1>{{ j.title }}{% if j.bookmarked %} ★{% endif %}</h1>
+<p class="sub">{{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}{% if j.work_mode %} · {{ j.work_mode }}{% endif %}{% if j.employment_type %} · {{ j.employment_type }}{% endif %}{% if j.salary_text %} · {{ j.salary_text }}{% endif %}
+  {% if j.posted_at %} · posted {{ j.posted_at.strftime('%b %d') }}{% endif %}{% if not j.active %} · <span class="badge b-hidden">closed</span>{% endif %}</p>
+<div class="actions" style="margin-bottom:16px">
+  <form class="inline" method="post" action="/jobs/{{ j.id }}/rank">{{ csrf_field(csrf) }}<button class="btn ghost">{{ 'Re-rank' if sc else 'Rank this job' }}</button></form>
+  {% if not app_row %}<form class="inline" method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}<input type="hidden" name="job" value="{{ j.id }}"><button class="btn" name="action" value="select">Add to application queue</button></form>
+  {% else %}<a class="btn ghost" href="{{ '/applications/%d'|format(app_row.id) if app_row.state in ('Submitted','Duplicate') else '/queue' }}">{{ app_row.state }}</a>{% endif %}
+  <form class="inline" method="post" action="/jobs/{{ j.id }}/tailor">{{ csrf_field(csrf) }}<button class="btn ghost">Tailor my CV</button></form>
+  <a class="btn ghost" href="/letters/{{ j.id }}">{{ 'Edit cover letter' if letter else 'Write cover letter' }}</a>
+  <form class="inline" method="post" action="/jobs/{{ j.id }}/bookmark">{{ csrf_field(csrf) }}<button class="btn ghost">{{ '★ Bookmarked' if j.bookmarked else '☆ Bookmark' }}</button></form>
+  <a class="btn ghost" href="{{ j.url|safe_url }}" target="_blank" rel="noopener noreferrer">Open posting ↗</a>
+  <form class="inline" method="post" action="/jobs/{{ j.id }}/open">{{ csrf_field(csrf) }}<button class="btn ghost">Open in app browser</button></form></div>
+<div class="grid g2">
+<div class="card"><h2>How you match</h2>
+  {% if sc %}{% set r = sc.result %}
+  <div class="row" style="align-items:center"><div style="flex:none"><div class="stat">{{ sc.score }}</div><div class="stat-label">{{ sc.recommendation }} · {{ sc.confidence }} confidence</div></div>
+    <div><table>{% for name, d in r.dimensions.items() %}<tr><td class="small"><b>{{ name }}</b><div class="muted">{{ d.basis }}</div></td><td style="width:120px">{% if d.score is not none %}<div class="bar"><i style="width:{{ d.score }}%"></i></div><span class="small">{{ d.score }}</span>{% else %}<span class="small muted">no info</span>{% endif %}</td></tr>{% endfor %}</table></div></div>
+  {% if r.strengths %}<h3>Strengths</h3><ul class="reasons">{% for x in r.strengths %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  {% if r.gaps %}<h3>Gaps</h3><ul class="reasons">{% for x in r.gaps %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  {% if r.requirements_missing %}<h3>Requirements you don't show</h3><p class="small muted">{{ r.requirements_missing|join(', ') }}</p>{% endif %}
+  <p class="small muted">Ranked against profile version {{ sc.profile_version }} on {{ sc.created_at.strftime('%b %d %H:%M') }}.</p>
+  {% else %}<p class="empty">Not ranked yet.</p>{% endif %}
+  {% set g = j.gates or {} %}{% if g.verdict %}<h3>Fit check <span class="badge b-{{ g.verdict }}">{{ g.verdict }}</span></h3><ul class="reasons">{% for x in g.reasons or [] %}<li>{{ x }}</li>{% else %}<li>No problems found.</li>{% endfor %}</ul>{% endif %}</div>
+<div class="card"><h2>How applying works here</h2>
+  <p><span class="badge b-{{ 'pass' if automated else 'flag' }}">{{ 'automated after you authorize' if automated else 'assisted: you submit' }}</span></p>
+  <p class="small muted">{{ pol.name }}: {{ pol.terms_note }}{% if j.ats %} · employer system: {{ j.ats }}{% endif %}</p>
+  <p class="small">Resume: {% if tailored and tailored.approved %}<a href="/resumes/{{ tailored.id }}">{{ tailored.label }}</a> (tailored){% elif resume %}<a href="/resumes/{{ resume.id }}">{{ resume.label }}</a>{% else %}<a href="/resumes">upload one first</a>{% endif %}
+    {% if tailored and not tailored.approved %}<br><a href="/resumes/{{ tailored.id }}">A tailored CV is waiting for your approval</a>{% endif %}<br>
+    Cover letter: {% if letter %}version {{ letter.number }}{% if letter.issues %} <span class="badge b-flag">{{ letter.issues|length }} warning(s)</span>{% endif %}{% else %}written when you apply{% endif %}</p>
+  {% if j.skills %}<h3>Skills in the posting</h3><p class="small">{{ j.skills|join(', ') }}</p>{% endif %}</div>
+</div>
+<div class="card"><h2>Description</h2><div class="desc">{{ j.description or 'No description.' }}</div></div>
+{% endblock %}

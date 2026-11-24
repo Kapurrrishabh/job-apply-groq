@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block title %}Settings{% endblock %}
+{% block body %}
+<h1>Settings</h1>
+<p class="sub">Your Groq key is encrypted on this computer and never shown again. Each person in the family has their own.</p>
+<div class="grid g2">
+<form class="card" method="post" action="/settings">{{ csrf_field(csrf) }}
+  <h2>Groq</h2>
+  <label>API key <span class="hint">Free at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. Currently: {{ key_hint }}</span></label>
+  <input type="password" name="api_key" placeholder="gsk_…" autocomplete="off">
+  <div class="row"><div><label>Model</label><select name="model">{% for m in models %}<option {{ 'selected' if m == st.model }}>{{ m }}</option>{% endfor %}</select></div>
+    <div><label>Temperature</label><input type="number" step="0.05" min="0" max="1" name="temperature" value="{{ st.temperature }}"></div>
+    <div><label>Max tokens</label><input type="number" min="256" max="8000" name="max_tokens" value="{{ st.max_tokens }}"></div></div>
+  <p class="small muted">Usage so far: {{ usage[0] }} requests, {{ usage[1] }} tokens.</p>
+  <h2 style="margin-top:18px">Applying</h2>
+  <div class="row"><div><label>Applications per day</label><input type="number" min="1" max="50" name="daily_limit" value="{{ st.daily_limit }}"></div>
+    <div><label>Minimum match score</label><input type="number" min="0" max="100" name="min_score" value="{{ st.min_score }}"></div>
+    <div><label>Cover letter style</label><select name="letter_style">{% for k in ['professional','concise','technical','internship','startup','experienced'] %}<option {{ 'selected' if k == st.letter_style }}>{{ k }}</option>{% endfor %}</select></div></div>
+  <h2 style="margin-top:18px">Ranking weights</h2>
+  <div class="row">{% for k, v in weights.items() %}<div style="min-width:110px"><label>{{ k }}</label><input type="number" step="1" min="0" name="w_{{ k }}" value="{{ v|int }}"></div>{% endfor %}</div>
+  <p class="hint">Relative weights; dimensions with no information are left out instead of counting against a job.</p>
+  <div class="actions"><button class="btn">Save settings</button><button class="btn ghost" formaction="/settings/test">Test Groq connection</button>
+    <button class="btn bad" formaction="/settings/key/delete" data-confirm="Remove your Groq key from this computer?">Remove key</button></div>
+</form>
+<div>
+<div class="card" id="sites"><h2>Job sites</h2>
+  <p class="small muted">Sign in once in the app's browser window. Logins are encrypted and kept at least 48 hours. Passwords are never stored. CAPTCHAs and codes are always yours to complete.</p>
+  <table>{% for key, p in platforms.items() if p.login_url %}
+    <tr><td><b>{{ p.name }}</b> <span class="badge b-{{ 'pass' if p.applying == 'automated' else 'flag' }}">{{ 'automated' if p.applying == 'automated' else 'assisted' }}</span><br>
+      <span class="small">{% if logins.get(key) %}<span class="badge b-pass">signed in</span> <span class="muted">until {{ logins[key].expires_at.strftime('%b %d %H:%M') }} UTC</span>{% else %}<span class="muted">not signed in</span>{% endif %}</span>
+      <div class="hint">{{ p.terms_note }}</div></td>
+      <td class="nowrap"><form method="post" action="/sites/{{ key }}/login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm">Sign in</button></form>
+        <form method="post" action="/sites/{{ key }}/check_login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm ghost">Check</button></form>
+        {% if logins.get(key) %}<form method="post" action="/sites/{{ key }}/forget" class="inline">{{ csrf_field(csrf) }}<button class="btn sm bad">Forget</button></form>{% endif %}</td></tr>
+  {% endfor %}</table>
+  <p class="small"><a href="https://github.com/Kapurrrishabh/job-apply-groq/blob/main/docs/PLATFORM_POLICIES.md" target="_blank" rel="noopener">Why some sites are assisted →</a></p></div>
+{% if legacy %}<form class="card" method="post" action="/settings/import-legacy">{{ csrf_field(csrf) }}<h2>Earlier data found</h2>
+  <p class="small muted">Import the profile, answers, resumes, application history, Groq key and site logins from the previous version of this app into this account.</p>
+  <button class="btn" data-confirm="Import the earlier data into this account?">Import earlier data</button></form>{% endif %}
+</div></div>
+{% endblock %}

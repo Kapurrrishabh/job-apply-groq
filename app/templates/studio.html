@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block title %}Cover letter · {{ j.title }}{% endblock %}
+{% block body %}
+<p class="small"><a href="/jobs/{{ j.id }}">← {{ j.title }}</a></p>
+<h1>Cover letter: {{ j.title }} at {{ j.company }}</h1>
+<p class="sub">Every claim must come from your profile. Numbers that are in neither your profile nor the posting are flagged.</p>
+<form class="card" method="post" action="/letters/{{ j.id }}/generate">{{ csrf_field(csrf) }}<div class="row"><div><label>Style</label><select name="style">{% for k, d in styles.items() %}<option value="{{ k }}" {{ 'selected' if cl and k == cl.style }}>{{ k }}: {{ d }}</option>{% endfor %}</select></div>
+  <div style="flex:none"><button class="btn">{{ 'Write a new version' if v else 'Write with Groq' }}</button></div></div></form>
+{% if v %}
+{% if v.issues %}<div class="flash err"><b>Check before sending:</b> {{ v.issues|join('; ') }}</div>{% endif %}
+<form class="card" method="post" action="/letters/{{ j.id }}/save">{{ csrf_field(csrf) }}<h2>Version {{ v.number }} <span class="small muted">({{ v.source }})</span></h2>
+  <input type="hidden" name="count" value="{{ v.paragraphs|length }}">
+  <p class="small muted">Dear Hiring Manager,</p>
+  {% for para in v.paragraphs %}<textarea class="para" name="p_{{ loop.index0 }}">{{ para }}</textarea>{% endfor %}
+  <p class="small muted">Kind regards,<br>{{ user.name }}</p>
+  <div class="actions"><button class="btn">Save my edits</button><a class="btn ghost" href="/letters/{{ j.id }}/pdf" target="_blank" rel="noopener">PDF</a></div></form>
+<form class="card" method="post" action="/letters/{{ j.id }}/regenerate">{{ csrf_field(csrf) }}<h2>Rewrite one paragraph</h2>
+  <div class="row"><div style="flex:none"><label>Paragraph</label><select name="index">{% for para in v.paragraphs %}<option value="{{ loop.index0 }}">{{ loop.index }}</option>{% endfor %}</select></div>
+    <div style="flex:3"><label>What to change (optional)</label><input type="text" name="instruction" placeholder="e.g. mention the RAG project instead"></div>
+    <div style="flex:none"><button class="btn ghost">Rewrite</button></div></div></form>
+<div class="card"><h2>Versions</h2><table>{% for x in versions %}<tr><td>v{{ x.number }}</td><td class="small">{{ x.source }}</td><td class="small muted">{{ x.created_at.strftime('%b %d %H:%M') }}</td><td class="small">{{ x.issues|length }} warning(s)</td></tr>{% endfor %}</table></div>
+{% else %}<div class="card empty" data-refresh="8">No letter yet. If you just pressed Write, this page refreshes itself.</div>{% endif %}
+{% endblock %}

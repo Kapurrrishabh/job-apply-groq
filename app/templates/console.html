@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Console{% endblock %}
+{% block body %}
+<h1>Execution console</h1>
+<p class="sub">Live events from searches, ranking, the agent and applications. Keys and passwords are removed before anything is written.</p>
+<div class="card"><div class="row" style="align-items:center;margin-bottom:10px"><div><b>Active:</b> <span id="console-active">…</span></div>
+  <div style="flex:none"><select id="console-filter"><option value="">all levels</option>{% for l in ['info','success','warn','error','wait'] %}<option>{{ l }}</option>{% endfor %}</select></div>
+  <div style="flex:none"><form method="post" action="/console/clear">{{ csrf_field(csrf) }}<button class="btn sm bad" data-confirm="Clear all console events?">Clear</button></form></div></div>
+  <div id="console" class="log"></div></div>
+<div class="card"><h2>Runs</h2><table><tr><th>#</th><th>Kind</th><th>Status</th><th>Summary</th><th>Started</th><th></th></tr>
+{% for r in runs %}<tr><td>{{ r.id }}</td><td>{{ r.kind }}</td><td><span class="badge b-{{ 'pass' if r.status == 'completed' else 'fail' if r.status == 'failed' else 'flag' }}">{{ r.status }}</span></td>
+  <td class="small">{{ r.summary }}</td><td class="small muted">{{ r.started_at.strftime('%b %d %H:%M:%S') if r.started_at else 'waiting' }}</td>
+  <td>{% if r.status in ('queued','running') %}<form method="post" action="/executions/{{ r.id }}/cancel">{{ csrf_field(csrf) }}<button class="btn sm bad">Stop</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6" class="empty">Nothing has run yet.</td></tr>{% endfor %}</table></div>
+{% endblock %}

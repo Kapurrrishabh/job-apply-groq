@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block title %}Diagnostics{% endblock %}
+{% block body %}
+<h1>Diagnostics</h1><p class="sub">Live checks of what the app depends on.</p>
+<div class="card"><table>{% for name, ok, detail in checks %}<tr><td><b>{{ name }}</b></td><td><span class="badge b-{{ 'pass' if ok else 'fail' }}">{{ 'ok' if ok else 'missing' }}</span></td><td class="small muted">{{ detail }}</td></tr>{% endfor %}</table>
+  <form method="post" action="/settings/test" class="actions">{{ csrf_field(csrf) }}<button class="btn ghost">Test Groq now</button></form></div>
+{% endblock %}

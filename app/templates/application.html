@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block title %}{{ j.title }}{% endblock %}
+{% block body %}
+<p class="small"><a href="/applications">← My applications</a></p>
+<h1>{{ j.title }} · {{ j.company }}</h1>
+<p class="sub"><span class="badge b-{{ 'submitted' if a.state == 'Submitted' else 'queued' }}">{{ a.state }}</span>
+  {% if a.submitted_at %} on {{ a.submitted_at.strftime('%b %d %Y %H:%M') }} UTC{% endif %}{% if a.reference %} · reference {{ a.reference }}{% endif %} · attempts {{ a.attempts }}</p>
+<div class="grid g2">
+<div class="card"><h2>Evidence</h2>
+  <p class="small">{{ (a.evidence or {}).get('detail') or 'No evidence recorded.' }}</p>
+  {% if (a.evidence or {}).get('url') %}<p class="small muted">Page: {{ a.evidence.url }}</p>{% endif %}
+  {% if shot %}<img class="shot" src="/applications/{{ a.id }}/evidence.png" alt="Confirmation page screenshot">{% endif %}
+  {% if a.error %}<p class="small"><b>Error:</b> {{ a.error }}</p>{% endif %}
+  {% if a.state == 'Submission Unconfirmed' %}<form method="post" action="/applications/{{ a.id }}/confirm">{{ csrf_field(csrf) }}<label>What you saw on the site (optional)</label><input type="text" name="note">
+    <div class="actions"><button class="btn ok" data-confirm="Record as submitted?">I checked: it was submitted</button></div></form>{% endif %}</div>
+<div class="card"><h2>What was sent</h2>
+  {% if snap %}<p class="small">Profile version {{ snap.profile_version }}{% if snap.score is not none %} · score {{ snap.score }}{% endif %}</p>
+  {% if snap.resume %}<p class="small">Resume: <b>{{ snap.resume.label }}</b> {% if snap.resume.file %}<a href="/applications/{{ a.id }}/resume">download the exact file</a>{% endif %}</p>{% endif %}
+  <p class="small">{{ snap.candidate.name }} · {{ snap.candidate.email }} · {{ snap.candidate.phone }}</p>
+  {% else %}<p class="empty">No saved copy. It is created when the application is submitted.</p>{% endif %}</div>
+</div>
+{% if snap and snap.cover_letter %}<div class="card"><h2>Cover letter</h2><div class="desc">{{ snap.cover_letter }}</div></div>{% endif %}
+{% set qa = snap.answers if snap and snap.answers else answers %}
+<div class="card"><h2>Answers</h2><table><tr><th>Question</th><th>Answer</th><th>From</th></tr>
+  {% for x in qa %}<tr><td class="small">{{ x.question }}</td><td class="small">{{ x.answer }}</td><td class="small muted">{{ x.source }}</td></tr>
+  {% else %}<tr><td colspan="3" class="empty">No form answers recorded.</td></tr>{% endfor %}</table></div>
+<form method="post" action="/applications/{{ a.id }}/delete">{{ csrf_field(csrf) }}<button class="btn bad" data-confirm="Delete this record, its screenshot and the saved resume copy? This cannot be undone.">Delete this record</button></form>
+{% endblock %}

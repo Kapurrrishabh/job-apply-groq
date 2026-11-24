@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block title %}{{ r.label }}{% endblock %}
+{% block body %}
+<p class="small"><a href="/resumes">← Resumes</a></p>
+<h1>{{ r.label }}</h1>
+<p class="sub">{{ r.kind }} · {{ (r.size / 1024)|round|int }} KB · added {{ r.created_at.strftime('%b %d %Y') }}{% if r.is_default %} · <b>default</b>{% endif %}</p>
+<div class="actions" style="margin-bottom:16px">
+  {% if not r.approved %}<form class="inline" method="post" action="/resumes/{{ r.id }}/approve">{{ csrf_field(csrf) }}<button class="btn ok">Approve for applications</button></form>{% endif %}
+  {% if r.approved and not r.is_default %}<form class="inline" method="post" action="/resumes/{{ r.id }}/default">{{ csrf_field(csrf) }}<button class="btn ghost">Make default</button></form>{% endif %}
+  {% if r.mime == 'application/pdf' %}<a class="btn ghost" href="/resumes/{{ r.id }}/file" target="_blank" rel="noopener">Preview</a>{% endif %}
+  <a class="btn ghost" href="/resumes/{{ r.id }}/file?download=1">Download</a></div>
+{% set t = (r.parsed or {}).get('tailoring') %}{% if t %}
+<div class="card"><h2>What changed from your profile</h2>
+  <p class="small">Built from profile version {{ t.profile_version }}. Only your own bullets are used; nothing was reworded.</p>
+  <p><b>Profile line:</b> {{ t.profile_line }}</p>
+  {% for c in t.competencies %}<p class="small"><b>{{ c.label }}:</b> {{ c.items }}</p>{% endfor %}
+  <table><tr><th>Entry</th><th>Kept, in this order</th><th>Left out</th></tr>
+  {% for d in t.diff %}<tr><td class="small"><b>{{ d.entry }}</b></td><td class="small"><ol class="reasons">{% for x in d.kept %}<li>{{ x }}</li>{% endfor %}</ol></td>
+    <td class="small muted"><ul class="reasons">{% for x in d.dropped %}<li>{{ x }}</li>{% endfor %}</ul></td></tr>{% endfor %}</table></div>{% endif %}
+<div class="card"><h2>Text the app reads</h2><div class="desc">{{ r.text or 'No text could be read from this file.' }}</div></div>
+{% endblock %}

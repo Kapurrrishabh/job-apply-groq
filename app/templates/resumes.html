@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}Resumes{% endblock %}
+{% block body %}
+<h1>Resumes</h1>
+<p class="sub">PDF or Word, up to 5 MB. The default resume is attached to applications unless you pick another.</p>
+<form class="card" method="post" action="/resumes/upload" enctype="multipart/form-data">{{ csrf_field(csrf) }}
+  <div class="row"><div style="flex:2"><label>File</label><input type="file" name="file" accept=".pdf,.docx" required></div>
+    <div><label>Label</label><input type="text" name="label" placeholder="e.g. ML internship CV"></div>
+    <div style="flex:none"><button class="btn">Upload</button></div></div></form>
+<div class="card"><table><tr><th>Resume</th><th>Kind</th><th>Size</th><th>Added</th><th></th></tr>
+{% for r in items %}<tr><td><a href="/resumes/{{ r.id }}"><b>{{ r.label }}</b></a> {% if r.is_default %}<span class="badge b-pass">default</span>{% endif %}{% if not r.approved %}<span class="badge b-flag">needs approval</span>{% endif %}</td>
+  <td class="small">{{ r.kind }}</td><td class="small muted">{{ (r.size / 1024)|round|int }} KB</td><td class="small muted">{{ r.created_at.strftime('%b %d') }}</td>
+  <td class="nowrap"><form class="inline" method="post" action="/resumes/{{ r.id }}/import">{{ csrf_field(csrf) }}<button class="btn sm" title="Read with Groq and review the changes">Update profile from this resume</button></form>
+    {% if not r.is_default and r.approved %}<form class="inline" method="post" action="/resumes/{{ r.id }}/default">{{ csrf_field(csrf) }}<button class="btn sm ghost">Make default</button></form>{% endif %}
+    <a class="btn sm ghost" href="/resumes/{{ r.id }}/file?download=1">Download</a>
+    <form class="inline" method="post" action="/resumes/{{ r.id }}/delete">{{ csrf_field(csrf) }}<button class="btn sm bad" data-confirm="Delete {{ r.label }}?">Delete</button></form></td></tr>
+{% else %}<tr><td colspan="5" class="empty">Upload your resume to get started.</td></tr>{% endfor %}</table></div>
+{% endblock %}

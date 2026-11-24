@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block title %}Dashboard{% endblock %}
+{% block body %}
+<h1>Hi {{ user.name.split(' ')[0] }} 👋</h1>
+<p class="sub">Profile → resume → Groq → find jobs → rank → select → apply → verify. Every number below comes from your own data.</p>
+<div class="grid g4">
+  <a class="card stat-card" href="/profile"><div class="stat">{{ pct }}%</div><div class="stat-label">profile complete</div></a>
+  <a class="card stat-card" href="/jobs"><div class="stat">{{ stats.jobs }}</div><div class="stat-label">jobs discovered</div></a>
+  <a class="card stat-card" href="/applications?state=Submitted"><div class="stat">{{ stats.submitted }}</div><div class="stat-label">applications submitted</div></a>
+  <a class="card stat-card" href="/queue"><div class="stat">{{ stats.awaiting }}</div><div class="stat-label">waiting for you</div></a>
+</div>
+<div class="grid g3">
+  <div class="card"><div class="stat">{{ stats.shortlisted }}</div><div class="stat-label">shortlisted in the queue</div></div>
+  <div class="card"><div class="stat">{{ stats.failed }}</div><div class="stat-label">failed or blocked</div></div>
+  <div class="card"><div class="stat">{{ stats.searches }}</div><div class="stat-label">saved searches</div></div>
+</div>
+<div class="grid g2">
+  <div class="card"><h2>Next steps</h2>
+    <ol class="steps">{% for title, done, href in steps %}<li><span class="dot {{ 'done' if done }}">{{ '✓' if done else loop.index }}</span><span class="title">{{ title }}</span><a class="btn sm {{ 'ghost' if done }}" href="{{ href }}">{{ 'Open' if done else 'Do it' }}</a></li>{% endfor %}</ol>
+    {% if missing %}<p class="small muted">Profile still missing: {{ missing|join(', ') }}.</p>{% endif %}</div>
+  <div class="card"><h2>Best matches</h2>
+    {% if top %}<table>{% for score, j, sc in top %}<tr><td><a href="/jobs/{{ j.id }}"><b>{{ j.title }}</b></a><br><span class="small muted">{{ j.company }} · {{ j.location }}</span></td><td class="score">{{ score }}</td><td><span class="small">{{ sc.recommendation }}</span></td></tr>{% endfor %}</table>
+    {% else %}<p class="empty">Rank some jobs to see your best matches here.</p>{% endif %}</div>
+</div>
+<div class="card"><h2>Recent activity <a class="small" href="/console">open console →</a></h2>
+  {% if recent %}<div class="log">{% for e in recent %}<div class="ev-{{ e.level }}">[{{ e.ts.strftime('%b %d %H:%M') }}] {{ e.message }}</div>{% endfor %}</div>{% else %}<p class="empty">Nothing has run yet.</p>{% endif %}</div>
+{% endblock %}

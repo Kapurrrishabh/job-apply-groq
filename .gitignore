@@ -1,0 +1,17 @@
+# Secrets, personal data and per-machine state: never committed.
+.env
+instance/
+data/
+.browser-profile/
+.sessions/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# LaTeX build by-products
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
