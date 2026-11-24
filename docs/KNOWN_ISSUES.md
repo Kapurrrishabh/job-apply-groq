@@ -5,7 +5,7 @@
 | 1 | CV import overwrote the whole profile | fixed: merge with review; conflicts only change when you tick them |
 | 2 | Tests read the live data folder | fixed: each test gets its own instance, key and database |
 | 3 | LinkedIn guest API ignored the experience filter | removed: LinkedIn is manual import and assisted applying (§8.2) |
-| 4 | Naukri terms could not be fetched (HTTP 403) | open: Naukri stays assisted until verified |
+| 4 | Naukri terms could not be fetched (HTTP 403) | resolved: read in a browser; they ban automated crawling and getting around anti-robot measures, so Naukri stays assisted |
 | 5 | Submission success inferred from page text without evidence | fixed: per-system confirmation patterns, screenshot, otherwise "Submission Unconfirmed" |
 | 6 | Saved site cookies stored unencrypted | fixed: Fernet-encrypted per user |
 | 7 | Local git history contains personal data | fixed: published history starts from a clean commit; the old history stays local only |

@@ -23,9 +23,9 @@ PLATFORMS: dict[str, Policy] = {
                        "§8.2 forbids bots and automated methods, so the app prepares and you submit",
                        "linkedin.com", "https://www.linkedin.com/login"),
     "naukri": Policy("Naukri", "manual_import", "assisted", "https://www.naukri.com/termsconditions",
-                     "Terms could not be fetched (HTTP 403); treated as restricted until verified", "naukri.com", "https://www.naukri.com/nlogin/login"),
+                     "Terms ban automated crawling and scraping and getting around its anti-robot measures, so the app prepares and you submit", "naukri.com", "https://www.naukri.com/nlogin/login"),
     "internshala": Policy("Internshala", "manual_import", "assisted", "https://internshala.com/terms",
-                          "Terms forbid data mining and extraction; automated applying is not addressed", "internshala.com", "https://internshala.com/login/user"),
+                          "Irrelevant applications get accounts blocked and the site uses reCAPTCHA, so the app prepares and you submit", "internshala.com", "https://internshala.com/login/user"),
     "other": Policy("Any other site", "manual_import", "assisted", "", "Paste the job; the app prepares, you submit"),
     "testboard": Policy("Test board (local)", "test", "automated", "", "Local mock job board used by the test suite"),
 }
