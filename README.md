@@ -57,8 +57,8 @@ Each site's terms were checked; the app only automates what they allow. Details:
 | Site | Finding jobs | Applying |
 |---|---|---|
 | Employer job systems (Greenhouse, Lever, Ashby) via [freehire.me](https://freehire.me) | search in the app | automated after you authorize |
-| Wellfound | import the job open in the app's browser | automated after you authorize (sign in first) |
-| LinkedIn, Naukri, Internshala, others | paste the job | assisted: the app prepares everything, you submit and press *I submitted it* |
+| Wellfound, Internshala | import the job open in the app's browser | automated after you authorize (sign in first) |
+| LinkedIn, Naukri, others | paste the job | assisted: the app prepares everything, you submit and press *I submitted it* |
 
 The app never solves CAPTCHAs or one-time codes, never hides that it is automated, and never uses proxies.
 

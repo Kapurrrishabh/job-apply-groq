@@ -115,6 +115,9 @@ def fill(b, ctx: FormContext) -> FillResult:
     for name, radios in groups.items():
         q = " ".join((radios[0]["group"] or name).replace("*", " ").split())
         opts = [r["label"] for r in radios]
+        ticked = next((r["label"] for r in radios if r["checked"]), None)
+        if ticked and not answer_rules.is_sensitive(q):
+            record(q, ticked, "prefilled", "radio"); continue
         a, src = decide(q, opts, ctx)
         if a:
             b.check(next(r["sel"] for r in radios if r["label"] == a)); record(q, a, src, "radio")

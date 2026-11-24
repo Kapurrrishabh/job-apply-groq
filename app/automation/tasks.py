@@ -84,9 +84,9 @@ def check_login(s, ex, cancelled):
 
 
 def import_page(s, ex, cancelled):
-    b = browser_for(ex.user_id)
-    row, new = jobs.upsert(s, ex.user_id, adapters()[0]["wellfound"].import_current_page(b))
-    events.emit(s, ex.user_id, f"Imported {row.title} at {row.company} from Wellfound", execution_id=ex.id, platform="wellfound",
+    b, platform = browser_for(ex.user_id), ex.params["platform"]
+    row, new = jobs.upsert(s, ex.user_id, adapters()[0][platform].import_current_page(b))
+    events.emit(s, ex.user_id, f"Imported {row.title} at {row.company} from {PLATFORMS[platform].name}", execution_id=ex.id, platform=platform,
                 level="success", status="completed", operation="import", detail={"job_id": row.id})
     return f"job {row.id}"
 

@@ -18,7 +18,9 @@
     <div class="row"><div><label for="f-company">Company</label><input id="f-company" type="text" name="company"></div><div><label for="f-import-location">Location</label><input id="f-import-location" type="text" name="location"></div><div><label for="f-salary">Salary</label><input id="f-salary" type="text" name="salary"></div></div>
     <label for="f-description">Description</label><textarea id="f-description" name="description" required></textarea>
     <div class="actions"><button class="btn">Import</button></div></form></details>
-  <form method="post" action="/jobs/import-page" class="actions">{{ csrf_field(csrf) }}<button class="btn ghost">Import the Wellfound job open in the app's browser</button></form>
+  <form method="post" action="/jobs/import-page" class="actions">{{ csrf_field(csrf) }}
+    <button class="btn ghost" name="platform" value="wellfound">Import the Wellfound job</button><button class="btn ghost" name="platform" value="internshala">Import the Internshala job</button></form>
+  <p class="hint">Sign in on Settings, browse the site in the app's browser window, open a job, then press Import. One page is read, on your click.</p>
   {% if saved or history %}<h2 style="margin-top:16px">Searches</h2><table>
   {% for ss in saved %}<tr><td><b>{{ ss.name }}</b> <span class="badge b-pass">saved</span></td><td class="small muted">{{ ss.result_count }} results</td>
     <td class="nowrap"><form class="inline" method="post" action="/searches/{{ ss.id }}/run">{{ csrf_field(csrf) }}<button class="btn sm ghost">Run</button></form>

@@ -18,3 +18,4 @@
 | 14 | Long hidden reasoning could cut cover letters short | fixed: 6,000-token default (measured) and one retry |
 | 15 | Stopped or crashed runs left jobs stuck in Queued | fixed: they return to the shortlist |
 | 16 | Phone layout, unlinked labels, lost messages on `#section` pages | fixed; covered by Playwright tests |
+| 17 | Internshala applying is tested against a mock of its pages, not the real site | open: watch your first real Internshala application in the Console |

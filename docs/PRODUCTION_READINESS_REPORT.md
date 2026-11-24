@@ -85,7 +85,7 @@ button; console level filter; agent run shown live; clear messages for bad input
 
 | Item | Why | How to confirm |
 |---|---|---|
-| Real submissions on Lever, Ashby and Wellfound | none appeared in today's searches / needs your sign-in and authorization | apply to 1-2 real jobs each and check the evidence |
+| Real submissions on Lever, Ashby, Wellfound and Internshala | none appeared in today's searches / needs your sign-in and authorization | apply to 1-2 real jobs each and check the evidence |
 | A real Greenhouse submission | the check was read-only by design | your first Greenhouse application: watch the Console |
 | Windows and Linux; Python 3.11 | only macOS with 3.12 and 3.13 was run | run the test suite there |
 

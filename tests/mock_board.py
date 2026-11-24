@@ -83,3 +83,54 @@ async def submit(jid: int, request: Request):
     if j["kind"] == "ambiguous": return "<p>Thanks, we will be in touch.</p>"
     if j["kind"] == "broken": return HTMLResponse("<h1>Internal Server Error</h1>", status_code=500)
     return f"<h1>Done</h1><p>Application received. Reference TB-{1000 + len(SUBMISSIONS)}</p>"
+
+
+# ---------- an Internshala-like site: detail page, apply form with a rich-text box, and "My applications" ----------
+
+INTERNSHALA = {
+    "machine-learning-internship-at-deepcraft1234": {"title": "Machine Learning Internship", "company": "DeepCraft", "kind": "open"},
+    "data-science-internship-at-oldco5678": {"title": "Data Science Internship", "company": "OldCo", "kind": "applied"},
+}
+
+
+def _intern(slug: str) -> dict:
+    if slug not in INTERNSHALA: raise HTTPException(404)
+    return INTERNSHALA[slug]
+
+
+@app.get("/internship/detail/{slug}", response_class=HTMLResponse)
+def intern_detail(slug: str):
+    j = _intern(slug)
+    action = "<p>Already applied</p>" if j["kind"] == "applied" else f"""<button onclick="location.href='/application/form/{slug}'">Apply now</button>"""
+    return f"""<html><body><nav>Internships Jobs Courses</nav><h1>{escape(j['title'])}</h1><p>{escape(j['company'])}</p><p>Actively hiring</p>
+<p>Work from home</p><p>START DATE</p><p>Immediately</p><p>STIPEND</p><p>₹ 15,000 /month</p>
+<h2>About the internship</h2><p>Train computer vision and RAG models in Python and PyTorch.</p>{action}</body></html>"""
+
+
+@app.get("/application/form/{slug}", response_class=HTMLResponse)
+def intern_form(slug: str):
+    _intern(slug)
+    return f"""<html><body><h1>Applying to {escape(_intern(slug)['company'])}</h1>
+<form method="post" action="/application/submit/{slug}" onsubmit="document.getElementById('cl').value = document.querySelector('.ql-editor').innerText">
+<h3>Cover letter</h3><p>Why should you be hired for this role?</p>
+<div class="ql-editor" contenteditable="true" style="min-height:80px;border:1px solid #999"></div>
+<textarea id="cl" name="cover_letter" style="display:none"></textarea>
+<div><p>Confirm your availability</p>
+<label><input type="radio" name="availability" value="yes" required> Yes, I am available to join immediately</label>
+<label><input type="radio" name="availability" value="no"> No (Please specify your availability)</label></div>
+<div><p>Have you worked with PyTorch before? Describe briefly.</p><textarea name="q1" required></textarea></div>
+<button type="submit">Submit</button></form></body></html>"""
+
+
+@app.post("/application/submit/{slug}", response_class=HTMLResponse)
+async def intern_submit(slug: str, request: Request):
+    _intern(slug); f = await request.form()
+    SUBMISSIONS.append({"internshala": slug, **dict(f.items())})
+    return "<h2>Application submitted successfully!</h2><p>Track it on My applications.</p>"
+
+
+@app.get("/student/applications", response_class=HTMLResponse)
+def intern_applications():
+    rows = "".join(f"<div><p>{escape(_intern(x['internshala'])['company'])}</p><p>{escape(_intern(x['internshala'])['title'])}</p><p>Applied</p></div>"
+                   for x in SUBMISSIONS if "internshala" in x)
+    return f"<html><body><h1>My applications</h1>{rows or '<p>No applications yet</p>'}</body></html>"

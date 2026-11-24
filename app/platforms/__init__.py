@@ -24,8 +24,9 @@ PLATFORMS: dict[str, Policy] = {
                        "linkedin.com", "https://www.linkedin.com/login"),
     "naukri": Policy("Naukri", "manual_import", "assisted", "https://www.naukri.com/termsconditions",
                      "Terms ban automated crawling and scraping and getting around its anti-robot measures, so the app prepares and you submit", "naukri.com", "https://www.naukri.com/nlogin/login"),
-    "internshala": Policy("Internshala", "manual_import", "assisted", "https://internshala.com/terms",
-                          "Irrelevant applications get accounts blocked and the site uses reCAPTCHA, so the app prepares and you submit", "internshala.com", "https://internshala.com/login/user"),
+    "internshala": Policy("Internshala", "page_import", "automated", "https://internshala.com/terms",
+                          "Terms don't forbid automation but block accounts that send irrelevant applications, so the app applies only to jobs you pick, "
+                          "one at a time; jobs are imported one page at a time", "internshala.com", "https://internshala.com/login/user"),
     "other": Policy("Any other site", "manual_import", "assisted", "", "Paste the job; the app prepares, you submit"),
     "testboard": Policy("Test board (local)", "test", "automated", "", "Local mock job board used by the test suite"),
 }
@@ -40,10 +41,11 @@ def offered() -> dict[str, Policy]:
 def adapters():
     from .ats import AUTOMATED, EmployerSystem
     from .freehire import Freehire
+    from .internshala import Internshala
     from .manual import Manual
     from .testboard import TestBoard
     from .wellfound import Wellfound
-    return {"freehire": Freehire(), "wellfound": Wellfound(), "testboard": TestBoard(), "manual": Manual(), "ats": EmployerSystem()}, AUTOMATED
+    return {"freehire": Freehire(), "wellfound": Wellfound(), "testboard": TestBoard(), "internshala": Internshala(), "manual": Manual(), "ats": EmployerSystem()}, AUTOMATED
 
 
 def apply_adapter(job):

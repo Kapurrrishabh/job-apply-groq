@@ -296,3 +296,64 @@ def test_two_people_apply_with_their_own_details(web, groq, profile_data, board)
         u.post("/queue/apply", data={"app": str(aid), "confirm": "yes"}); worker.run_pending_now(120)
     assert [(x["name"], x["email"]) for x in board] == [("Asha Rao", "a@example.com"), ("Ben Das", "b@example.com")]
     assert board[0]["resume_name"] != board[1]["resume_name"]
+
+
+# ---------- Internshala (an Internshala-like site on the mock board) ----------
+
+INTERN = "machine-learning-internship-at-deepcraft1234"
+
+
+def signed_in_to_internshala():
+    from app import site_sessions
+    s = db.session()
+    site_sessions.save(s, 1, "internshala", [{"name": "PHPSESSID", "value": "test", "domain": ".internshala.com", "path": "/", "expires": -1}],
+                       domain="internshala.com")
+    s.commit(); s.close()
+
+
+def import_internshala(u, board_url, slug, path="/internship/detail/"):
+    s = db.session(); worker.enqueue(s, 1, "open_url", {"url": f"{board_url}{path}{slug}"}); s.commit(); s.close()
+    u.post("/jobs/import-page", data={"platform": "internshala"}); worker.run_pending_now(60)
+    return db.session().scalar(select(db.Job).where(db.Job.platform == "internshala", db.Job.source_id == slug))
+
+
+def test_internshala_import_and_apply(ready, board, board_url):
+    signed_in_to_internshala()
+    job = import_internshala(ready, board_url, INTERN)
+    assert (job.title, job.company, job.location, job.salary_text, job.work_mode) == (
+        "Machine Learning Internship", "DeepCraft", "Work from home", "₹ 15,000 /month", "remote")
+    ready.post("/answers", data={"count": "1", "pattern_0": "availability", "answer_0": "Yes, I am available to join immediately",
+                                 "pattern_1": "pytorch before", "answer_1": "Yes: at Acme AI I cut inference latency by 40% with ONNX export."})
+    apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.SUBMITTED and "applications list shows DeepCraft" in a.evidence["detail"]
+    sent = board[-1]
+    assert sent["availability"] == "yes" and "40%" in sent["q1"] and "cut inference latency by 40%" in sent["cover_letter"]
+
+
+def test_internshala_waits_until_you_sign_in(ready, board, board_url):
+    job = import_internshala(ready, board_url, INTERN); apply(ready, job.id)
+    assert app_of(job.id).state == S.AWAITING and "Sign in to Internshala" in app_of(job.id).blocker and board == []
+
+
+def test_internshala_questions_wait_for_you_then_submit(ready, board, board_url):
+    signed_in_to_internshala()
+    job = import_internshala(ready, board_url, INTERN); apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.AWAITING and board == []
+    assert [q["question"] for q in a.pending] == ["Have you worked with PyTorch before? Describe briefly.", "Confirm your availability"]
+    ready.post(f"/applications/{a.id}/answer", data={"a_0": "Yes, at Acme AI.", "a_1": "Yes, I am available to join immediately"})
+    worker.run_pending_now(120)
+    assert app_of(job.id).state == S.SUBMITTED and board[-1]["q1"] == "Yes, at Acme AI."
+
+
+def test_internshala_already_applied_sends_nothing(ready, board, board_url):
+    signed_in_to_internshala()
+    job = import_internshala(ready, board_url, "data-science-internship-at-oldco5678"); apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.FAILED and "already applied" in a.error and board == []
+
+
+def test_internshala_import_refuses_other_pages(ready, board_url):
+    assert import_internshala(ready, board_url, "1", path="/jobs/") is None
+    assert "Open an Internshala internship or job page" in events_text()

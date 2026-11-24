@@ -80,9 +80,10 @@ def import_job(url: str = Form(""), title: str = Form(...), company: str = Form(
 
 
 @app.post("/jobs/import-page")
-def import_page(ctx: Ctx = CTX):
-    worker.enqueue(ctx.s, ctx.uid, "import_page", {"platform": "wellfound"})
-    return back("/console", "Reading the Wellfound job open in the app's browser")
+def import_page(platform: str = Form(...), ctx: Ctx = CTX):
+    if PLATFORMS.get(platform, PLATFORMS["other"]).discovery != "page_import": return back("/jobs", "That site's jobs can't be imported from the browser", "err")
+    worker.enqueue(ctx.s, ctx.uid, "import_page", {"platform": platform})
+    return back("/console", f"Reading the {PLATFORMS[platform].name} job open in the app's browser")
 
 
 @app.post("/jobs/bulk")

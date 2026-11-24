@@ -14,6 +14,11 @@ CHALLENGE_FRAMES = ("iframe[src*='recaptcha'][src*='anchor']:not([src*='size=inv
 FIELDS_JS = r"""() => {
   const out = [];
   const text = el => (el ? (el.innerText || el.textContent || '').trim() : '');
+  const before = el => {   // the question text just above a field that has no <label>
+    for (let n = el, i = 0; n && i < 3; n = n.parentElement, i++)
+      for (let p = n.previousElementSibling; p; p = p.previousElementSibling) { const t = text(p); if (t && t.length < 300) return t; if (t) break; }
+    return '';
+  };
   document.querySelectorAll('input, select, textarea, button, [role=combobox], [role=radio], [role=checkbox]').forEach((el, i) => {
     if (el.type === 'hidden' || el.getAttribute('aria-hidden') === 'true') return;   // helpers people never see
     const r = el.getBoundingClientRect();
@@ -24,7 +29,9 @@ FIELDS_JS = r"""() => {
     if (!label) label = text(el.closest('label'));
     if (!label && el.getAttribute('aria-labelledby')) label = text(document.getElementById(el.getAttribute('aria-labelledby')));
     const fs = el.closest('fieldset'), rg = el.closest('[role=radiogroup], [role=group]');
-    const group = fs ? text(fs.querySelector('legend')) : (rg ? (rg.getAttribute('aria-label') || '') : '');
+    let group = fs ? text(fs.querySelector('legend')) : (rg ? (rg.getAttribute('aria-label') || '') : '');
+    if (!group && el.type === 'radio') group = before(el.closest('label') || el);
+    if (!label && !el.getAttribute('aria-label') && !el.placeholder && el.type !== 'radio') label = before(el);
     out.push({sel: `[data-ajs="${i}"]`, tag: el.tagName.toLowerCase(), type: (el.type || el.getAttribute('role') || '').toLowerCase(),
       name: el.name || '', id: el.id || '', aria: el.getAttribute('aria-label') || '', placeholder: el.placeholder || '',
       label: label.slice(0, 300), group: group.slice(0, 300), value: (el.value || '').slice(0, 300), checked: !!el.checked,

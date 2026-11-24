@@ -13,8 +13,8 @@ from .applications import snapshot, submitted_today
 from .forms import FormContext
 
 WORKER_ID = uuid.uuid4().hex
-DELAY = {"wellfound": 45, "freehire": 30, "testboard": 0}       # seconds between applications on the same platform
-LOGIN_NEEDED = {"wellfound"}
+DELAY = {"wellfound": 45, "internshala": 60, "freehire": 30, "testboard": 0}   # seconds between applications; provisional, human-paced
+LOGIN_NEEDED = {"wellfound", "internshala"}
 
 
 def _lock(s, a: db.Application) -> bool:

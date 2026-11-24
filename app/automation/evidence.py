@@ -8,6 +8,7 @@ CONFIRM = {
     "lever": [r"(?i)application submitted", r"(?i)thanks for applying"],
     "ashby": [r"(?i)application (was )?submitted", r"(?i)thanks for (your )?appl(ying|ication)"],
     "wellfound": [r"(?i)application sent", r"(?i)you applied"],
+    "internshala": [r"(?i)application (has been )?submitted successfully"],
     "testboard": [r"(?i)application received\. reference (TB-\d+)"],
 }
 REFERENCE = re.compile(r"(?i)(?:reference|application id|confirmation (?:number|code))[:\s#]+([A-Z0-9-]{4,})")
