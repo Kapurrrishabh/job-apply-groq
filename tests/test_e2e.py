@@ -521,3 +521,54 @@ def test_page_without_a_form_is_handed_to_you(ready, board_url, board):
     ready.post("/sites/other/automate_on", data={"accept": "yes"})
     job = paste_careers_job(ready, board_url, "ops-intern"); apply(ready, job.id)
     assert app_of(job.id).state == S.AWAITING and "Couldn't find an application form" in app_of(job.id).blocker and board == []
+
+
+# ---------- learning a new form flow, and signing in with Google ----------
+
+def test_new_form_flow_is_learned_once_and_reused(ready, board_url, board, groq):
+    ready.post("/sites/other/automate_on", data={"accept": "yes"})
+    asked = []
+    groq.routes["move through a job application form"] = lambda m: asked.append(m[-1]["content"]) or {"label": "Proceed to experience"}
+    first = paste_careers_job(ready, board_url, "steps-intern"); apply(ready, first.id)
+    assert app_of(first.id).state == S.SUBMITTED and len(asked) == 1 and "Cancel" not in asked[0]   # Cancel is never offered to the AI
+    assert db.session().scalar(select(db.SiteFlow.advance)) == ["Proceed to experience"]
+    second = paste_careers_job(ready, board_url, "steps-analyst"); apply(ready, second.id)
+    assert app_of(second.id).state == S.SUBMITTED and len(asked) == 1                                # learned: no second question
+    assert [b["careers"] for b in board] == ["steps-intern", "steps-analyst"]
+
+
+def test_unknown_flow_waits_when_the_ai_is_unsure(ready, board_url, board, groq):
+    ready.post("/sites/other/automate_on", data={"accept": "yes"})
+    groq.routes["move through a job application form"] = {"label": None}
+    job = paste_careers_job(ready, board_url, "steps-intern"); apply(ready, job.id)
+    assert app_of(job.id).state == S.AWAITING and "Couldn't tell how to continue" in app_of(job.id).blocker and board == []
+
+
+GOOGLE_CHOOSER = """<html><body><h1>Choose an account</h1><div data-identifier="asha@example.com" role="link"
+onclick="location.href = new URLSearchParams(location.search).get('redirect_uri')">Asha Rao asha@example.com</div></body></html>"""
+
+
+def google_route(page_html):
+    def handle(route):
+        route.fulfill(status=200, content_type="text/html", body=page_html)
+    b = worker.browser_for(1); b.start(); b.ctx.route("https://accounts.google.com/**", handle)
+
+
+def test_continue_with_google_signs_in_and_applies(ready, board_url, board):
+    for site in ("other", "google"): ready.post(f"/sites/{site}/automate_on", data={"accept": "yes"})
+    google_route(GOOGLE_CHOOSER)
+    job = paste_careers_job(ready, board_url, "google-intern"); apply(ready, job.id)
+    assert app_of(job.id).state == S.SUBMITTED and board[-1]["email"] == "asha@example.com"
+
+
+def test_google_password_prompt_is_left_to_you(ready, board_url, board):
+    for site in ("other", "google"): ready.post(f"/sites/{site}/automate_on", data={"accept": "yes"})
+    google_route('<html><body><h1>Sign in</h1><input type="password" name="Passwd"></body></html>')
+    job = paste_careers_job(ready, board_url, "google-intern"); apply(ready, job.id)
+    assert app_of(job.id).state == S.AWAITING and "Google wants you to sign in" in app_of(job.id).blocker and board == []
+
+
+def test_google_sign_in_is_not_used_unless_switched_on(ready, board_url, board):
+    ready.post("/sites/other/automate_on", data={"accept": "yes"})
+    job = paste_careers_job(ready, board_url, "google-intern"); apply(ready, job.id)
+    assert app_of(job.id).state == S.AWAITING and "sign in or create an account" in app_of(job.id).blocker and board == []

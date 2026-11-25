@@ -10,6 +10,7 @@ from ..ai.provider import LLMError
 from ..platforms import PLATFORMS, adapters
 from . import states as S
 from .applications import adapter_for, snapshot, submitted_today
+from .flows import Navigator
 from .forms import FormContext
 from ..platforms.generic import NeedsYou
 
@@ -100,9 +101,10 @@ def run_one(s, user_id: int, a: db.Application, browser, execution_id: int) -> s
             pol = PLATFORMS.get(job.platform, PLATFORMS["other"])
             S.move(a, S.AWAITING, blocker=f"Assisted ({pol.terms_note}). Open the job, submit it with the prepared resume and cover letter, then press 'I submitted it'.")
             emit(f"Prepared for you to submit on {pol.name}", level="wait", status="waiting", operation="prepare"); return a.state
+        opted = (s.get(db.UserSettings, user_id) or db.UserSettings(opt_in=[])).opt_in or []
         ctx = FormContext(profile=p, rules=answers.rules(s, user_id), resume_path=str(resumes.path(r)),
                           cover_text=letters.text_of(v, p.personal.name) if v else "", cover_path=cover_pdf,
-                          ai_answer=_ai_answer(s, user_id, p, job))
+                          ai_answer=_ai_answer(s, user_id, p, job), navigator=Navigator(s, user_id), use_google="google" in opted)
 
         # ---- fill
         S.move(a, S.FILLING); s.commit(); emit("Opening the application form", operation="fill")

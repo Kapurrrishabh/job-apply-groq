@@ -268,6 +268,17 @@ class ExecutionEvent(Base):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
+class SiteFlow(Base):
+    """What the app learned about a site's application form: the buttons that move it to its next step."""
+    __tablename__ = "site_flows"
+    __table_args__ = (UniqueConstraint("user_id", "host"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    host: Mapped[str] = mapped_column(String(200))
+    advance: Mapped[list] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
 class PlatformSession(Base):
     __tablename__ = "platform_sessions"
     __table_args__ = (UniqueConstraint("user_id", "platform"),)

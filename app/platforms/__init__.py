@@ -12,6 +12,7 @@ class Policy:
     domain: str = ""
     login_url: str = ""
     opt_in: str = ""    # set when you may switch on automation despite the terms; says what you accept
+    check_url: str = ""   # a page that sends you to sign-in when you're signed out; defaults to the site's home page
 
 
 PLATFORMS: dict[str, Policy] = {
@@ -33,6 +34,11 @@ PLATFORMS: dict[str, Policy] = {
                           "one at a time; jobs are imported one page at a time", "internshala.com", "https://internshala.com/login/user"),
     "employer": Policy("Company job site (Greenhouse, Lever, Ashby)", "manual_import", "automated", "",
                        "The employer's own job system: paste the link and the app applies after you authorize"),
+    "google": Policy("Google sign-in on job sites", "none", "assisted", "https://policies.google.com/terms",
+                     "Sign in to Google once in the app's browser; sites offering 'Continue with Google' can then be signed into for you",
+                     "google.com", "https://accounts.google.com/", check_url="https://myaccount.google.com/",
+                     opt_in="the app clicks 'Continue with Google' on job sites and picks your account; it never types your Google password "
+                            "and stops for security checks or requests for more than your name and email"),
     "other": Policy("Any other site", "manual_import", "assisted", "", "Paste the job; the app prepares, you submit, unless you switch on applying on other sites",
                     opt_in="every site has its own terms and some forbid automated applying; the app tries each one like a person would and stops when unsure"),
     "testboard": Policy("Test board (local)", "test", "automated", "", "Local mock job board used by the test suite"),

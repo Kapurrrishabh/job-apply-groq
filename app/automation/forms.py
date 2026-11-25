@@ -49,6 +49,8 @@ class FormContext:
     cover_text: str = ""
     cover_path: str | None = None
     ai_answer: Callable[[str, list[str] | None], str | None] | None = None   # non-sensitive questions only
+    navigator: object | None = None    # flows.Navigator: learns which buttons move a multi-step form on
+    use_google: bool = False           # you allowed 'Continue with Google' on job sites
 
 
 @dataclass

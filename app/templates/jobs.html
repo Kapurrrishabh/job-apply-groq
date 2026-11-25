@@ -34,7 +34,7 @@
   <aside>
     <form class="card filters" method="get" action="/jobs"><h2>Filter</h2>
       <label for="f-q">Keyword</label><input id="f-q" type="text" name="q" value="{{ f.q }}">
-      <label for="f-filter-platform">Source</label><select id="f-filter-platform" name="platform"><option value="">all</option>{% for k, p in platforms.items() %}<option value="{{ k }}" {{ 'selected' if k == f.platform }}>{{ p.name }}</option>{% endfor %}<option value="imported" {{ 'selected' if f.platform == 'imported' }}>earlier version</option></select>
+      <label for="f-filter-platform">Source</label><select id="f-filter-platform" name="platform"><option value="">all</option>{% for k, p in platforms.items() if p.discovery != 'none' %}<option value="{{ k }}" {{ 'selected' if k == f.platform }}>{{ p.name }}</option>{% endfor %}<option value="imported" {{ 'selected' if f.platform == 'imported' }}>earlier version</option></select>
       <label for="f-verdict">Fit check</label><select id="f-verdict" name="verdict"><option value="">all</option>{% for v, lbl in [('pass', 'fits your rules'), ('flag', 'check these'), ('fail', "doesn't fit")] %}<option value="{{ v }}" {{ 'selected' if v == f.verdict }}>{{ lbl }}</option>{% endfor %}</select>
       <label for="f-min_score">Minimum score</label><input id="f-min_score" type="number" name="min_score" min="0" max="100" value="{{ f.min_score or '' }}">
       <label for="f-mode">Work mode</label><select id="f-mode" name="mode"><option value="">any</option>{% for m in ['remote', 'hybrid', 'onsite'] %}<option {{ 'selected' if m == f.mode }}>{{ m }}</option>{% endfor %}</select>

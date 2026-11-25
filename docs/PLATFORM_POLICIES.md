@@ -31,3 +31,9 @@ mode the table above does not allow.
 - **Any other site** (opt-in): the app opens the job, follows its Apply button, fills the form and submits, then looks for a
   "thank you for applying" message. It never fills or asks for passwords; a sign-in or account page, a page without a form,
   or a missing submit button hands the job to you. Naukri is not included: its terms forbid it.
+- **New form flows** are learned per site: buttons such as Next or Continue are pressed directly; for other wording Groq picks
+  from the visible buttons, never one that submits, cancels or withdraws, and the choice is remembered for that site.
+- **Google sign-in** (opt-in): you sign in to Google yourself in the app's browser. On sites offering "Continue with Google"
+  the app clicks it and picks your account. It never types your Google password, and hands over for Google's security
+  checks or when a site asks for more than your name and email. Google may refuse sign-in from an automated browser;
+  then you finish that step in the window.

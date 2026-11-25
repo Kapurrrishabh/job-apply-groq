@@ -59,6 +59,11 @@ your profile can't answer; answer them once on the Shortlist page and they are r
 [Brave Search API](https://brave.com/search/api/) key; paid, with $5 of monthly credit, card required) adds job pages from company job sites, Internshala and, if you
 switched it on, LinkedIn. Google's own search API is closed to new users, and scraping Google breaks its terms.
 
+For **other sites**, switch on "Any other site" in Settings: the app follows the Apply button, works through multi-step
+forms (learning each site's Next/Continue buttons, with Groq's help for new wording) and submits. Switch on **Google
+sign-in** too and it uses "Continue with Google" on sites that offer it, after you've signed in to Google once in the app's
+browser. Account walls it can't pass and anything it isn't sure about are handed to you.
+
 The **AI agent** page lets you describe a search in plain words. It can search, rank, write letters and shortlist,
 but it can never submit; that stays your click.
 

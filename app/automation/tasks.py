@@ -1,4 +1,5 @@
 """What each execution kind does. Each handler gets (session, execution, cancelled()) and returns a summary."""
+import re
 from .. import events, jobs, letters, site_sessions
 from ..platforms import PLATFORMS, adapters
 from . import states as S
@@ -73,8 +74,8 @@ def login(s, ex, cancelled):
 
 def check_login(s, ex, cancelled):
     platform = ex.params["platform"]; pol = PLATFORMS[platform]
-    b = browser_for(ex.user_id); b.goto(f"https://{pol.domain}/"); b.wait(3000)
-    ok = "login" not in b.url().lower() and any(c.get("domain", "").lstrip(".").endswith(pol.domain) for c in b.cookies())
+    b = browser_for(ex.user_id); b.goto(pol.check_url or f"https://{pol.domain}/"); b.wait(3000)
+    ok = not re.search(r"(?i)login|signin|servicelogin", b.url()) and any(c.get("domain", "").lstrip(".").endswith(pol.domain) for c in b.cookies())
     if ok:
         row = site_sessions.save(s, ex.user_id, platform, b.cookies(), domain=pol.domain); b.window("minimized")
         events.emit(s, ex.user_id, f"{pol.name}: signed in; login saved until {row.expires_at:%b %d %H:%M} UTC", execution_id=ex.id,

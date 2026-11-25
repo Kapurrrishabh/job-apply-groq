@@ -184,7 +184,8 @@ async def linkedin_submit(jid: str, request: Request):
 
 # ---------- an ordinary company careers site ----------
 
-CAREERS = {"ml-intern": "simple", "data-intern": "account", "ops-intern": "noform"}
+CAREERS = {"ml-intern": "simple", "data-intern": "account", "ops-intern": "noform", "steps-intern": "steps", "steps-analyst": "steps",
+           "google-intern": "google"}
 
 
 @app.get("/careers/{slug}", response_class=HTMLResponse)
@@ -195,8 +196,22 @@ def careers_job(slug: str):
     return f"<html><body><h1>{slug.replace('-', ' ').title()}</h1><p>Smallco, Bengaluru</p><p>Python and ML.</p>{link}</body></html>"
 
 
+STEPS_FORM = """<html><body><h2>Your application</h2><form method="post" action="/careers/{slug}/apply" enctype="multipart/form-data">
+<section id="s1"><h3>About you</h3><label for="n">Full name *</label><input id="n" name="name" required>
+<label for="e">Email *</label><input id="e" type="email" name="email" required><label for="p">Phone</label><input id="p" name="phone">
+<button type="button" onclick="document.getElementById('s1').hidden = true; document.getElementById('s2').hidden = false">Proceed to experience</button>
+<button type="button" onclick="location.href='/careers'">Cancel</button></section>
+<section id="s2" hidden><h3>Experience</h3><label for="r">Upload your CV *</label><input id="r" type="file" name="cv" required>
+<label for="w">Why do you want to join us?</label><textarea id="w" name="why"></textarea><button type="submit">Submit</button></section>
+</form></body></html>"""
+
+
 @app.get("/careers/{slug}/apply", response_class=HTMLResponse)
-def careers_form(slug: str):
+def careers_form(slug: str, request: Request, signed: int = 0):
+    if CAREERS.get(slug) == "steps": return STEPS_FORM.replace("{slug}", slug)
+    if CAREERS.get(slug) == "google" and not signed:
+        return f"""<html><body><h2>Sign in to apply</h2><label for="pw">Password</label><input id="pw" type="password" name="pw">
+<a href="https://accounts.google.com/o/oauth2/v2/auth?client_id=x&redirect_uri={str(request.base_url).rstrip('/')}/careers/{slug}/apply%3Fsigned%3D1">Continue with Google</a></body></html>"""
     if CAREERS.get(slug) == "account":
         return """<html><body><h2>Sign in to apply</h2><form method="post" action="/careers/login"><label for="u">Email</label><input id="u" type="email" name="u">
 <label for="pw">Password</label><input id="pw" type="password" name="pw"><button type="submit">Sign in</button></form><a href="#">Create an account</a></body></html>"""

@@ -19,3 +19,5 @@
 | 15 | Stopped or crashed runs left jobs stuck in Queued | fixed: they return to the shortlist |
 | 16 | Phone layout, unlinked labels, lost messages on `#section` pages | fixed; covered by Playwright tests |
 | 17 | Internshala applying is tested against a mock of its pages, not the real site | open: watch your first real Internshala application in the Console |
+| 18 | LinkedIn Easy Apply, any-site applying and Google sign-in are tested against local copies of those pages | open: watch the first real ones in the Activity console |
+| 19 | Brave Search API is paid ($5 of monthly credit, card required) | by design: freehire and pasted links stay free |
