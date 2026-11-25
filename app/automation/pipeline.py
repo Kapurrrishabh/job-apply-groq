@@ -11,9 +11,10 @@ from ..platforms import PLATFORMS, adapters
 from . import states as S
 from .applications import adapter_for, snapshot, submitted_today
 from .forms import FormContext
+from ..platforms.generic import NeedsYou
 
 WORKER_ID = uuid.uuid4().hex
-DELAY = {"wellfound": 45, "internshala": 60, "linkedin": 90, "freehire": 30, "testboard": 0}   # seconds between applications; provisional, human-paced
+DELAY = {"wellfound": 45, "internshala": 60, "linkedin": 90, "other": 30, "freehire": 30, "testboard": 0}   # seconds between applications; provisional, human-paced
 LOGIN_NEEDED = {"wellfound", "internshala", "linkedin"}
 
 
@@ -105,7 +106,10 @@ def run_one(s, user_id: int, a: db.Application, browser, execution_id: int) -> s
 
         # ---- fill
         S.move(a, S.FILLING); s.commit(); emit("Opening the application form", operation="fill")
-        res = adapter.fill_application(browser, job, ctx)
+        try:
+            res = adapter.fill_application(browser, job, ctx)
+        except NeedsYou as e:
+            browser.window("normal"); S.move(a, S.AWAITING, blocker=str(e)); emit(a.blocker, level="wait", status="waiting"); return a.state
         barrier = browser.barrier()
         if barrier:
             browser.window("normal")
@@ -125,6 +129,8 @@ def run_one(s, user_id: int, a: db.Application, browser, execution_id: int) -> s
         S.move(a, S.SUBMITTING); a.attempts += 1; s.commit(); emit("Submitting", operation="submit")
         try:
             text, url = adapter.submit_application(browser, job)
+        except NeedsYou as e:   # raised before anything was clicked
+            S.move(a, S.FAILED, error=str(e), blocker=str(e)); emit(str(e), level="error", status="failed"); return a.state
         except Exception as e:
             S.move(a, S.UNCONFIRMED, error=f"{type(e).__name__}: {e}"[:500], blocker="The submit step failed part-way. Check the site before retrying.")
             emit(f"Submission outcome unknown: {e}", level="error", status="failed"); return a.state

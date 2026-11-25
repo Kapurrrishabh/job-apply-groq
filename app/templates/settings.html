@@ -25,7 +25,7 @@
 <div>
 <div class="card" id="sites"><h2>Job sites</h2>
   <p class="small muted">Sign in once in the app's browser window. Logins are encrypted and kept at least 48 hours. Passwords are never stored. CAPTCHAs and codes are always yours to complete.</p>
-  <table>{% for key, p in platforms.items() if p.login_url %}
+  <table>{% for key, p in platforms.items() if p.login_url or p.opt_in %}
     {% set auto = p.applying == 'automated' or key in opted %}
     <tr><td><b>{{ p.name }}</b> <span class="badge b-{{ 'pass' if auto else 'flag' }}">{{ 'automated' if auto else 'assisted' }}</span><br>
       <span class="small">{% if logins.get(key) %}<span class="badge b-pass">signed in</span> <span class="muted">until {{ logins[key].expires_at.strftime('%b %d %H:%M') }} UTC</span>{% else %}<span class="muted">not signed in</span>{% endif %}</span>
@@ -34,8 +34,8 @@
       {% else %}<form method="post" action="/sites/{{ key }}/automate_on">{{ csrf_field(csrf) }}
         <label class="check"><input type="checkbox" name="accept" value="yes" required> I understand: {{ p.opt_in }}. I accept that risk for my account.</label>
         <button class="btn sm bad">Let the app apply on {{ p.name }} for me</button></form>{% endif %}{% endif %}</td>
-      <td class="nowrap"><form method="post" action="/sites/{{ key }}/login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm">Sign in</button></form>
-        <form method="post" action="/sites/{{ key }}/check_login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm ghost">Check</button></form>
+      <td class="nowrap">{% if p.login_url %}<form method="post" action="/sites/{{ key }}/login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm">Sign in</button></form>
+        <form method="post" action="/sites/{{ key }}/check_login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm ghost">Check</button></form>{% endif %}
         {% if logins.get(key) %}<form method="post" action="/sites/{{ key }}/forget" class="inline">{{ csrf_field(csrf) }}<button class="btn sm bad">Forget</button></form>{% endif %}</td></tr>
   {% endfor %}</table>
   <p class="small"><a href="https://github.com/Kapurrrishabh/job-apply-groq/blob/main/docs/PLATFORM_POLICIES.md" target="_blank" rel="noopener">Why some sites are assisted →</a></p></div>
@@ -55,7 +55,7 @@
 <form class="card" method="post" action="/settings/brave">{{ csrf_field(csrf) }}<h2>Web search</h2>
   <p class="small muted">Finds job pages on company job sites, Internshala, and LinkedIn (if you switched it on) through the official
     <a href="https://brave.com/search/api/" target="_blank" rel="noopener">Brave Search API</a>. Google's own search API is closed to new users.
-    A free Brave key covers roughly 1,000 searches a month.</p>
+    It's paid ($5 per 1,000 searches) with $5 of credit each month, and Brave asks for a card.</p>
   <label for="f-brave_key">Brave Search API key <span class="hint">Currently: {{ brave_hint }}</span></label><input id="f-brave_key" type="password" name="brave_key" autocomplete="off">
   <div class="actions"><button class="btn">Save key</button>{% if brave_hint != 'not set' %}<button class="btn bad" formaction="/settings/key/delete" name="provider" value="brave">Remove key</button>{% endif %}</div>
 </form>

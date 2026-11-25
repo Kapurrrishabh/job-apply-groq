@@ -88,11 +88,11 @@ def fill(b, ctx: FormContext, within: str | None = None) -> FillResult:
 
     for f in fields:
         q = " ".join((f["label"] or f["aria"] or f["placeholder"] or f["name"]).replace("*", " ").split())
-        if f["tag"] == "button" or f["type"] in ("submit", "button", "search", "radio") or not q: continue
+        if f["tag"] == "button" or f["type"] in ("submit", "button", "search", "radio", "password") or not q: continue   # passwords are never filled or asked for
         if f["type"] == "file":
-            if RESUME.search(q + f["name"] + f["id"]):
+            if RESUME.search(" ".join((q, f["name"], f["id"]))):
                 b.upload(f["sel"], ctx.resume_path); res.resume_uploaded = True; record(q, ctx.resume_path.rsplit("/", 1)[-1], "resume", "file")
-            elif ctx.cover_path and COVER.search(q + f["name"] + f["id"]):
+            elif ctx.cover_path and COVER.search(" ".join((q, f["name"], f["id"]))):
                 b.upload(f["sel"], ctx.cover_path); record(q, ctx.cover_path.rsplit("/", 1)[-1], "cover letter", "file")
             continue
         if f["type"] == "checkbox":

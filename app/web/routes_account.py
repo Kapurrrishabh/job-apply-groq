@@ -174,7 +174,7 @@ def site_login(platform: str, action: str, accept: str = Form(""), ctx: Ctx = CT
     from ..automation import worker
     from ..platforms import PLATFORMS
     pol = PLATFORMS.get(platform)
-    if not pol or not pol.login_url or action not in ("login", "check_login", "forget", "automate_on", "automate_off"):
+    if not pol or action not in ("login", "check_login", "forget", "automate_on", "automate_off") or (action in ("login", "check_login", "forget") and not pol.login_url):
         return back("/settings#sites", "Unknown site or action", "err")
     if action in ("automate_on", "automate_off"):
         if not pol.opt_in: return back("/settings#sites", f"{pol.name} can't be switched", "err")

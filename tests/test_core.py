@@ -317,3 +317,15 @@ def test_auto_apply_runs_on_its_schedule():
     assert is_due({"on": True}, now)
     assert not is_due({"on": True, "every_hours": 12, "last_run": (now - timedelta(hours=11)).isoformat()}, now)
     assert is_due({"on": True, "every_hours": 12, "last_run": (now - timedelta(hours=12)).isoformat()}, now)
+
+
+def test_password_fields_are_never_filled_or_asked(profile_data):
+    from app.automation import forms
+    class Page:
+        filled = []
+        def fields(self, within=None):
+            return [{"sel": "#pw", "tag": "input", "type": "password", "name": "pw", "id": "pw", "aria": "", "placeholder": "", "label": "Password",
+                     "group": "", "value": "", "checked": False, "text": "", "required": True, "combo": False, "options": None, "selected": ""}]
+        def fill(self, sel, value): self.filled.append(sel)
+    res = forms.fill(Page(), forms.FormContext(profile=P(profile_data), rules=[{"pattern": "password", "answer": "hunter2"}], resume_path="cv.pdf"))
+    assert Page.filled == [] and res.missing == [] and res.answers == []

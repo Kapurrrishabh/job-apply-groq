@@ -55,8 +55,8 @@ points at the next one. The first time:
 **Auto-apply** (Settings) does all of this on a schedule with no clicks: give it standing permission once, and every
 6, 12 or 24 hours it searches for the roles on your profile, ranks what it finds and applies to jobs scoring at least your
 minimum, within your daily limit. It still stops for CAPTCHAs, sensitive questions without a saved answer, and questions
-your profile can't answer; answer them once on the Shortlist page and they are reused. **Web search** (Settings: a free
-[Brave Search API](https://brave.com/search/api/) key) adds job pages from company job sites, Internshala and, if you
+your profile can't answer; answer them once on the Shortlist page and they are reused. **Web search** (Settings: a
+[Brave Search API](https://brave.com/search/api/) key; paid, with $5 of monthly credit, card required) adds job pages from company job sites, Internshala and, if you
 switched it on, LinkedIn. Google's own search API is closed to new users, and scraping Google breaks its terms.
 
 The **AI agent** page lets you describe a search in plain words. It can search, rank, write letters and shortlist,

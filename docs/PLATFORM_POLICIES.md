@@ -28,3 +28,6 @@ mode the table above does not allow.
   Internshala, and LinkedIn when you switched LinkedIn automation on. At most 10 pages are opened per search, 4 s apart.
 - **Auto-apply** acts on your standing permission (Settings), recorded with the time you gave it. It applies only to jobs at or
   above your minimum score, within your daily limit, on sites where the app may submit; the LLM still never decides to submit.
+- **Any other site** (opt-in): the app opens the job, follows its Apply button, fills the form and submits, then looks for a
+  "thank you for applying" message. It never fills or asks for passwords; a sign-in or account page, a page without a form,
+  or a missing submit button hands the job to you. Naukri is not included: its terms forbid it.

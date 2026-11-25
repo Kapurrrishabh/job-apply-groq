@@ -180,3 +180,34 @@ async def linkedin_submit(jid: str, request: Request):
     f = await request.form(); resume = f.get("resume")
     SUBMISSIONS.append({"linkedin": jid, **{k: v for k, v in f.items() if k != "resume"}, "resume_name": getattr(resume, "filename", "")})
     return f"<div role='dialog'><h2>Your application was sent to {escape(LINKEDIN[jid]['company'])}!</h2><button>Done</button></div>"
+
+
+# ---------- an ordinary company careers site ----------
+
+CAREERS = {"ml-intern": "simple", "data-intern": "account", "ops-intern": "noform"}
+
+
+@app.get("/careers/{slug}", response_class=HTMLResponse)
+def careers_job(slug: str):
+    kind = CAREERS.get(slug) or ""
+    if not kind: raise HTTPException(404)
+    link = "" if kind == "noform" else f'<a href="/careers/{slug}/apply">Apply now</a>'
+    return f"<html><body><h1>{slug.replace('-', ' ').title()}</h1><p>Smallco, Bengaluru</p><p>Python and ML.</p>{link}</body></html>"
+
+
+@app.get("/careers/{slug}/apply", response_class=HTMLResponse)
+def careers_form(slug: str):
+    if CAREERS.get(slug) == "account":
+        return """<html><body><h2>Sign in to apply</h2><form method="post" action="/careers/login"><label for="u">Email</label><input id="u" type="email" name="u">
+<label for="pw">Password</label><input id="pw" type="password" name="pw"><button type="submit">Sign in</button></form><a href="#">Create an account</a></body></html>"""
+    return f"""<html><body><h2>Apply</h2><form method="post" action="/careers/{slug}/apply" enctype="multipart/form-data">
+<label for="n">Full name *</label><input id="n" name="name" required><label for="e">Email *</label><input id="e" type="email" name="email" required>
+<label for="p">Phone</label><input id="p" name="phone"><label for="r">Upload your CV *</label><input id="r" type="file" name="cv" required>
+<label for="w">Why do you want to join us?</label><textarea id="w" name="why"></textarea><button type="submit">Submit</button></form></body></html>"""
+
+
+@app.post("/careers/{slug}/apply", response_class=HTMLResponse)
+async def careers_submit(slug: str, request: Request):
+    f = await request.form(); cv = f.get("cv")
+    SUBMISSIONS.append({"careers": slug, **{k: v for k, v in f.items() if k != "cv"}, "resume_name": getattr(cv, "filename", "")})
+    return "<h1>Thank you for your application!</h1><p>We will be in touch.</p>"

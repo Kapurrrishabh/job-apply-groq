@@ -9,6 +9,8 @@ CONFIRM = {
     "ashby": [r"(?i)application (was )?submitted", r"(?i)thanks for (your )?appl(ying|ication)"],
     "wellfound": [r"(?i)application sent", r"(?i)you applied"],
     "internshala": [r"(?i)application (has been )?submitted successfully"],
+    "generic": [r"(?i)thank you for (applying|your application)", r"(?i)application (has been |was )?(received|submitted|sent)",
+                r"(?i)successfully applied", r"(?i)we('ve| have) received your application"],
     "linkedin": [r"(?i)your application was sent", r"(?i)\bapplication sent\b"],
     "testboard": [r"(?i)application received\. reference (TB-\d+)"],
 }

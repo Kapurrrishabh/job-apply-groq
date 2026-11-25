@@ -487,3 +487,37 @@ def test_auto_apply_leaves_low_scores_alone(ready, board, monkeypatch):
     ready.post("/settings/autopilot", data={"on": "1", "every_hours": "12", "consent": "yes"})
     auto_apply_once(ready)
     assert list(db.session().scalars(select(db.Application))) == [] and board == []
+
+
+# ---------- any other site (opt-in) ----------
+
+def paste_careers_job(u, board_url, slug):
+    u.post("/jobs/import", data={"url": f"{board_url}/careers/{slug}", "title": slug.replace("-", " ").title(), "company": "Smallco",
+                                 "description": "Python and ML internship."})
+    return db.session().scalar(select(db.Job).where(db.Job.url == f"{board_url}/careers/{slug}"))
+
+
+def test_other_sites_are_assisted_until_switched_on(ready, board_url, board):
+    job = paste_careers_job(ready, board_url, "ml-intern"); apply(ready, job.id)
+    assert job.platform == "other" and app_of(job.id).state == S.AWAITING and "Assisted" in app_of(job.id).blocker and board == []
+
+
+def test_other_site_form_is_filled_and_sent(ready, board_url, board):
+    ready.post("/sites/other/automate_on", data={"accept": "yes"})
+    job = paste_careers_job(ready, board_url, "ml-intern"); apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.SUBMITTED and "thank you for your application" in a.evidence["detail"].lower()
+    assert (board[-1]["name"], board[-1]["email"]) == ("Asha Rao", "asha@example.com") and board[-1]["resume_name"].endswith(".pdf")
+
+
+def test_account_wall_is_handed_to_you_and_no_password_is_asked(ready, board_url, board):
+    ready.post("/sites/other/automate_on", data={"accept": "yes"})
+    job = paste_careers_job(ready, board_url, "data-intern"); apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.AWAITING and "sign in or create an account" in a.blocker and a.pending == [] and board == []
+
+
+def test_page_without_a_form_is_handed_to_you(ready, board_url, board):
+    ready.post("/sites/other/automate_on", data={"accept": "yes"})
+    job = paste_careers_job(ready, board_url, "ops-intern"); apply(ready, job.id)
+    assert app_of(job.id).state == S.AWAITING and "Couldn't find an application form" in app_of(job.id).blocker and board == []

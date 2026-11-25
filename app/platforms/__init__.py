@@ -33,7 +33,8 @@ PLATFORMS: dict[str, Policy] = {
                           "one at a time; jobs are imported one page at a time", "internshala.com", "https://internshala.com/login/user"),
     "employer": Policy("Company job site (Greenhouse, Lever, Ashby)", "manual_import", "automated", "",
                        "The employer's own job system: paste the link and the app applies after you authorize"),
-    "other": Policy("Any other site", "manual_import", "assisted", "", "Paste the job; the app prepares, you submit"),
+    "other": Policy("Any other site", "manual_import", "assisted", "", "Paste the job; the app prepares, you submit, unless you switch on applying on other sites",
+                    opt_in="every site has its own terms and some forbid automated applying; the app tries each one like a person would and stops when unsure"),
     "testboard": Policy("Test board (local)", "test", "automated", "", "Local mock job board used by the test suite"),
 }
 
@@ -47,13 +48,14 @@ def offered() -> dict[str, Policy]:
 def adapters():
     from .ats import AUTOMATED, EmployerSystem
     from .freehire import Freehire
+    from .generic import GenericSite
     from .internshala import Internshala
     from .linkedin import LinkedIn
     from .manual import Manual
     from .testboard import TestBoard
     from .wellfound import Wellfound
     employer = EmployerSystem()
-    return {"freehire": Freehire(), "wellfound": Wellfound(), "testboard": TestBoard(), "internshala": Internshala(), "linkedin": LinkedIn(), "manual": Manual(), "ats": employer,
+    return {"freehire": Freehire(), "wellfound": Wellfound(), "testboard": TestBoard(), "internshala": Internshala(), "linkedin": LinkedIn(), "other": GenericSite(), "manual": Manual(), "ats": employer,
             "employer": employer}, AUTOMATED
 
 
