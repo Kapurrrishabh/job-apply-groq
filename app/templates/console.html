@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% block title %}Console{% endblock %}
 {% block body %}
-<h1>Execution console</h1>
+{% include "_system_tabs.html" %}
+<h1>Activity console</h1>
 <p class="sub">Live events from searches, ranking, the agent and applications. Keys and passwords are removed before anything is written.</p>
 <div class="card"><div class="row" style="align-items:center;margin-bottom:10px"><div><b>Active:</b> <span id="console-active">…</span></div>
   <div style="flex:none"><select id="console-filter"><option value="">all levels</option>{% for l in ['info','success','warn','error','wait'] %}<option>{{ l }}</option>{% endfor %}</select></div>

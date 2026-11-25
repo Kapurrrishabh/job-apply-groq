@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block title %}Profile{% endblock %}
 {% block body %}
+{% include "_you_tabs.html" %}
 <h1>My profile</h1>
 <p class="sub">The single source of truth for every application. Version {{ version }}; every save keeps the earlier version.</p>
 <div class="card"><div class="row" style="align-items:center"><div style="flex:3"><div class="bar"><i style="width:{{ pct }}%"></i></div></div><div><b>{{ pct }}% complete</b></div></div>

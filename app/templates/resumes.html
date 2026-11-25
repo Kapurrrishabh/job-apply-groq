@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block title %}Resumes{% endblock %}
 {% block body %}
+{% include "_you_tabs.html" %}
 <h1>Resumes</h1>
 <p class="sub">PDF or Word, up to 5 MB. The default resume is attached to applications unless you pick another.</p>
 <form class="card" method="post" action="/resumes/upload" enctype="multipart/form-data">{{ csrf_field(csrf) }}

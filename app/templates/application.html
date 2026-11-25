@@ -2,7 +2,7 @@
 {% block body %}
 <p class="small"><a href="/applications">← My applications</a></p>
 <h1>{{ j.title }} · {{ j.company }}</h1>
-<p class="sub"><span class="badge b-{{ 'submitted' if a.state == 'Submitted' else 'queued' }}">{{ a.state }}</span>
+<p class="sub"><span class="badge b-{{ 'submitted' if a.state == 'Submitted' else 'queued' }}">{{ a.state|state_label }}</span>
   {% if a.submitted_at %} on {{ a.submitted_at.strftime('%b %d %Y %H:%M') }} UTC{% endif %}{% if a.reference %} · reference {{ a.reference }}{% endif %} · attempts {{ a.attempts }}</p>
 <div class="grid g2">
 <div class="card"><h2>Evidence</h2>

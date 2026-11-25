@@ -79,8 +79,10 @@ def delete(aid: int, ctx: Ctx = CTX):
 
 @app.get("/applications", response_class=HTMLResponse)
 def history(request: Request, q: str = "", state: str = "", ctx: Ctx = CTX):
-    rows = _rows(ctx.s, ctx.uid, [state] if state in HISTORY_STATES else HISTORY_STATES, q)
-    return page(request, "applications.html", ctx, rows=rows, q=q, state=state, states=HISTORY_STATES)
+    every = _rows(ctx.s, ctx.uid, HISTORY_STATES, q)
+    counts = {st: sum(a.state == st for a, _ in every) for st in HISTORY_STATES}
+    rows = [r for r in every if r[0].state == state] if state in HISTORY_STATES else every
+    return page(request, "applications.html", ctx, rows=rows, q=q, state=state, states=HISTORY_STATES, counts=counts, total=len(every))
 
 
 @app.get("/applications/{aid}", response_class=HTMLResponse)

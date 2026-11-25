@@ -11,8 +11,16 @@ from app import db
 from app.automation import states as S, worker
 from conftest import make_pdf, serve
 
-NAV = ["Dashboard", "Job Search", "Agent", "Queue", "My Applications", "Cover Letters", "Profile", "Resumes", "Answers", "Console",
-       "Skills", "Settings", "Diagnostics"]
+MAIN = ["Home", "Find jobs", "Shortlist", "Applications", "Cover letters", "AI agent"]
+ACCOUNT = ["My profile", "Resumes", "Saved answers", "Settings & job sites", "Activity console", "Agent skills", "Diagnostics"]
+
+
+def go(page, name):
+    """Open a section from the header: the main sections, or the account menu for the rest."""
+    if name in MAIN:
+        page.locator("nav.main").get_by_role("link", name=name, exact=False).first.click()
+    else:
+        page.get_by_label("Account menu").click(); page.locator(".menu-list").get_by_role("link", name=name).click()
 
 
 @pytest.fixture
@@ -89,8 +97,8 @@ def search_board(page, app_url, drain):
 
 def shortlist(page, app_url, title):
     page.goto(f"{app_url}/jobs")
-    page.locator("tr", has_text=title).first.locator("input[name=job]").check()
-    page.get_by_role("button", name="Add to application queue").click()
+    page.locator(".job-card", has_text=title).first.locator("input[type=checkbox][name=job]").check()
+    page.get_by_role("button", name="Shortlist selected").click()
     expect(page).to_have_url(re.compile("/queue"))
 
 
@@ -110,7 +118,7 @@ def test_sign_up_out_and_back_in(page, app_url):
     page.goto(app_url)
     expect(page).to_have_url(re.compile("/register"))       # the first visit creates the first account
     sign_up(page, app_url)
-    page.get_by_role("button", name=re.compile("Sign out")).click()
+    page.get_by_label("Account menu").click(); page.get_by_role("button", name="Sign out").click()
     expect(page).to_have_url(re.compile("/login"))
     page.get_by_label("Email").fill("asha@example.com"); page.get_by_label("Password").fill("not the password")
     page.get_by_role("button", name="Sign in").click()
@@ -132,8 +140,8 @@ def test_deep_link_returns_after_sign_in(page, app_url):
 
 def test_every_page_opens_from_the_menu_without_errors(page, app_url):
     sign_up(page, app_url)
-    for name in NAV:
-        page.locator("nav.side").get_by_role("link", name=re.compile(name)).click()
+    for name in MAIN + ACCOUNT:
+        go(page, name)
         expect(page.get_by_role("heading", level=1)).to_be_visible()
     assert page.problems == []      # includes Content-Security-Policy violations
 
@@ -148,7 +156,7 @@ def test_pages_fit_a_phone_screen(page, app_url, path):
 
 def test_whole_journey_by_clicking(page, app_url, groq, profile_data, board, drain):
     sign_up(page, app_url)
-    page.locator("nav.side").get_by_role("link", name=re.compile("Settings")).click()
+    go(page, "Settings & job sites")
     page.locator("input[name=api_key]").fill("gsk_" + "k" * 40); page.get_by_role("button", name="Save settings").click()
     expect(page.locator(".flash.ok")).to_contain_text("Settings saved")
     expect(page.get_by_text("ends in …kkkk")).to_be_visible()
@@ -173,12 +181,13 @@ def test_whole_journey_by_clicking(page, app_url, groq, profile_data, board, dra
     search_board(page, app_url, drain)
     page.goto(f"{app_url}/jobs")
     page.locator("[data-select-all=job]").check()
-    assert page.locator("input[name=job]:checked").count() == page.locator("input[name=job]").count() > 5
+    boxes = page.locator("input[type=checkbox][name=job]")
+    assert page.locator("input[type=checkbox][name=job]:checked").count() == boxes.count() > 5
     page.locator("[data-select-all=job]").uncheck()
-    page.locator("tr", has_text="Nimbus Labs").first.locator("input[name=job]").check()
+    page.locator(".job-card", has_text="Nimbus Labs").first.locator("input[type=checkbox][name=job]").check()
     page.get_by_role("button", name="Rank selected").click(); drain()
     page.goto(f"{app_url}/jobs?sort=score")
-    page.locator("tr", has_text="Nimbus Labs").first.get_by_role("link").click()
+    page.locator(".job-card", has_text="Nimbus Labs").first.locator(".jc-title").click()
     expect(page.get_by_text("Built a RAG search")).to_be_visible()
 
     page.get_by_role("link", name="Write cover letter").click()
@@ -193,8 +202,8 @@ def test_whole_journey_by_clicking(page, app_url, groq, profile_data, board, dra
     expect(page.locator(".flash.ok")).to_contain_text("Paragraph 2 rewritten (version 3)")
 
     page.goto(f"{app_url}/jobs?sort=score")
-    page.locator("tr", has_text="Nimbus Labs").first.get_by_role("link").click()
-    page.get_by_role("button", name="Add to application queue").click()
+    page.locator(".job-card", has_text="Nimbus Labs").first.locator(".jc-title").click()
+    page.get_by_role("button", name="Shortlist to apply").click()
     before = page.url
     page.get_by_role("button", name="Apply to selected").click()          # the confirmation box is required
     expect(page).to_have_url(before)
@@ -202,7 +211,7 @@ def test_whole_journey_by_clicking(page, app_url, groq, profile_data, board, dra
     authorize(page); drain()
     expect(page.locator("#console")).to_contain_text("Submitted", timeout=10000)
 
-    page.locator("nav.side").get_by_role("link", name=re.compile("My Applications")).click()
+    go(page, "Applications")
     page.get_by_role("link", name="Machine Learning Intern").click()
     expect(page.get_by_text(re.compile(r"reference TB-\d+"))).to_be_visible()
     expect(page.locator(".desc")).to_contain_text("At Acme AI I built a RAG search over 12k documents.")
@@ -238,7 +247,7 @@ def test_captcha_is_handed_to_you(me, app_url, drain, board):
     search_board(me, app_url, drain); shortlist(me, app_url, "Guarded Inc"); authorize(me); drain()
     me.goto(f"{app_url}/queue")
     expect(me.locator(".card.wait", has_text="Data Intern")).to_contain_text("CAPTCHA")
-    expect(me.locator("nav.side .pill")).to_have_text("1")
+    expect(me.locator("nav.main .pill")).to_have_text("1")
     assert board == []
 
 
@@ -260,7 +269,7 @@ def test_assisted_site_is_prepared_and_you_submit(me, app_url, drain, board):
     form.get_by_label("Title").fill("AI Engineer Intern"); form.get_by_label("Company").fill("Linked Co")
     form.get_by_label("Description").fill("Python and LLMs."); form.get_by_role("button", name="Import").click()
     expect(me.get_by_text("assisted: you submit")).to_be_visible()
-    me.get_by_role("button", name="Add to application queue").click(); authorize(me); drain()
+    me.get_by_role("button", name="Shortlist to apply").click(); authorize(me); drain()
     me.goto(f"{app_url}/queue")
     card = me.locator(".card.wait", has_text="AI Engineer Intern")
     expect(card).to_contain_text("Assisted")
@@ -271,7 +280,7 @@ def test_assisted_site_is_prepared_and_you_submit(me, app_url, drain, board):
 
 def test_removing_a_job_from_the_queue(me, app_url, drain):
     search_board(me, app_url, drain); shortlist(me, app_url, "Nimbus Labs")
-    me.locator("tr", has_text="Machine Learning Intern").get_by_role("button", name="Remove").click()
+    me.locator(".app-card", has_text="Machine Learning Intern").get_by_role("button", name="Remove").click()
     expect(me.locator(".flash.ok")).to_contain_text("Removed from the queue")
     assert state_of("Machine Learning Intern") is None
 

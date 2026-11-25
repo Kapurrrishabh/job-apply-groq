@@ -28,26 +28,31 @@ pip install -r requirements.txt
 python run.py                        # opens http://127.0.0.1:8000
 ```
 
+The bar under the header shows your five steps (**Get ready → Find jobs → Shortlist → Apply → Track**) and always
+points at the next one. The first time:
+
 1. **Create your account.** The first visit asks for your email and a password (10+ characters).
-2. **Settings:** paste your Groq key and press *Test Groq connection*.
+2. **Settings & job sites** (account menu, top right): paste your Groq key and press *Test Groq connection*.
+   Sign in to Internshala or Wellfound here if you use them.
 3. **Resumes:** upload your resume (PDF or Word) and press *Update profile from this resume*. Review what it found;
    anything that disagrees with your profile is only changed if you tick it.
-4. **Profile:** check your details and what you're looking for (roles, cities, job types, salary floor).
-5. **Answers:** add answers to questions forms keep asking (notice period, expected salary, work authorization).
+4. **My profile:** check your details and what you're looking for (roles, cities, job types, salary floor).
+5. **Saved answers:** add answers to questions forms keep asking (notice period, expected salary, work authorization).
    Salary, visa, legal and demographic questions are only ever answered from here, never guessed.
 
 ## Daily use
 
-1. **Job Search:** search, or paste a job from any site. Each job gets a quick fit check (pass / flag / fail).
-2. Tick jobs → **Rank selected**. Each job gets a 0-100 score with the reasons, strengths and gaps.
+1. **Find jobs:** search, paste a job from any site, or import the Internshala or Wellfound job open in the app's
+   browser. Each job card shows a quick check against your rules.
+2. Tick jobs → **Rank selected**. Each job gets a 0-100 match score with the reasons, strengths and gaps.
 3. Open a job → **Write cover letter** (edit it, or rewrite one paragraph) and optionally **Tailor my CV**
    (it picks and orders your own bullets, shows you what changed, and waits for your approval).
-4. Tick jobs → **Add to application queue** → on **Queue**, tick the confirmation box → **Apply to selected**.
-5. Watch **Console**. If a site shows a CAPTCHA or a code, or asks something the app doesn't know, the application
-   waits on the Queue page for you. Your answers are saved for next time.
-6. **My Applications** shows exactly what was sent: the resume file, cover letter, every answer and the confirmation.
+4. Press **Shortlist** on the jobs you want → on **Shortlist**, tick the confirmation box → **Apply to selected**.
+5. If a site shows a CAPTCHA or asks something the app doesn't know, the job moves to **Needs you** on the Shortlist
+   page (the number in the header). Your answers are saved for next time. **Activity console** shows every step live.
+6. **Applications** shows exactly what was sent: the resume file, cover letter, every answer and the confirmation.
 
-The **Agent** page lets you describe a search in plain words. It can search, rank, write letters and shortlist,
+The **AI agent** page lets you describe a search in plain words. It can search, rank, write letters and shortlist,
 but it can never submit; that stays your click.
 
 ## Which sites are automated

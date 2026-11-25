@@ -5,6 +5,9 @@ FAILED, BLOCKED, DUPLICATE = "Failed", "Blocked", "Duplicate"
 
 ALL = [DISCOVERED, RANKED, SELECTED, QUEUED, PREFLIGHT, PREPARING, FILLING, AWAITING, READY, SUBMITTING, SUBMITTED, UNCONFIRMED, FAILED, BLOCKED, DUPLICATE]
 FINAL = {SUBMITTED, DUPLICATE}
+# What people see; the names above are what the app stores.
+LABELS = {SELECTED: "Shortlisted", QUEUED: "Queued to send", PREFLIGHT: "Applying…", PREPARING: "Applying…", FILLING: "Applying…",
+          READY: "Applying…", SUBMITTING: "Applying…", AWAITING: "Needs you", UNCONFIRMED: "Needs a check", DUPLICATE: "Already applied"}
 ACTIVE = {QUEUED, PREFLIGHT, PREPARING, FILLING, READY, SUBMITTING}
 
 ALLOWED = {

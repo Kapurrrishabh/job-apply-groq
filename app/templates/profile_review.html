@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block title %}Review import{% endblock %}
 {% block body %}
+{% include "_you_tabs.html" %}
 <h1>Review what the resume adds</h1>
 <p class="sub">Additions and empty fields are filled automatically. Where the resume disagrees with your profile, your profile is kept unless you tick the box.</p>
 <form class="card" method="post" action="/profile/review">{{ csrf_field(csrf) }}

@@ -1,7 +1,7 @@
 // Small progressive enhancements; every page also works without JavaScript.
 document.addEventListener('click', e => {
   const all = e.target.closest('[data-select-all]');
-  if (all) document.querySelectorAll(`input[name="${all.dataset.selectAll}"]`).forEach(c => { c.checked = all.checked; });
+  if (all) document.querySelectorAll(`input[type=checkbox][name="${all.dataset.selectAll}"]`).forEach(c => { c.checked = all.checked; });
   const conf = e.target.closest('[data-confirm]');
   if (conf && !window.confirm(conf.dataset.confirm)) e.preventDefault();
 });

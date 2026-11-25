@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% block title %}Settings{% endblock %}
 {% block body %}
-<h1>Settings</h1>
+{% include "_system_tabs.html" %}
+<h1>Settings &amp; job sites</h1>
 <p class="sub">Your Groq key is encrypted on this computer and never shown again. Each person in the family has their own.</p>
 <div class="grid g2">
 <form class="card" method="post" action="/settings">{{ csrf_field(csrf) }}

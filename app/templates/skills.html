@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block title %}Skills{% endblock %}
 {% block body %}
+{% include "_system_tabs.html" %}
 <h1>Agent skills</h1>
 <p class="sub">Skills from <a href="{{ prov.repository|safe_url }}" target="_blank" rel="noopener">ai-job-search</a> (commit <span class="kbd">{{ prov.commit[:10] }}</span>, {{ prov.license }}). They are read as guidance only; no code from them runs.</p>
 <div class="card"><table><tr><th>Skill</th><th>Status</th><th>Tools</th><th>Why</th></tr>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block title %}Answers{% endblock %}
 {% block body %}
+{% include "_you_tabs.html" %}
 <h1>Saved answers</h1>
 <p class="sub">Answers to recurring application questions. The first pattern that matches a question wins. Salary, visa, legal and demographic questions are only ever answered from here, never guessed.</p>
 <form class="card" method="get" action="/answers"><div class="row"><div style="flex:3"><label for="f-test">Try a question</label><input id="f-test" type="text" name="test" value="{{ test }}" placeholder="e.g. Are you authorized to work in India?"></div><div style="flex:none"><button class="btn ghost">Test</button></div></div>

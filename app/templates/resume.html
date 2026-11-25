@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block title %}{{ r.label }}{% endblock %}
 {% block body %}
+{% include "_you_tabs.html" %}
 <p class="small"><a href="/resumes">← Resumes</a></p>
 <h1>{{ r.label }}</h1>
 <p class="sub">{{ r.kind }} · {{ (r.size / 1024)|round|int }} KB · added {{ r.created_at.strftime('%b %d %Y') }}{% if r.is_default %} · <b>default</b>{% endif %}</p>

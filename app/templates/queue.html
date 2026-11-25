@@ -1,16 +1,18 @@
-{% extends "base.html" %}{% block title %}Queue{% endblock %}
+{% extends "base.html" %}{% block title %}Shortlist{% endblock %}
 {% block body %}
-<h1>Application queue</h1>
-<p class="sub">Nothing is submitted until you press Apply. Today: {{ today }} of {{ limit }} applications sent.</p>
-{% set busy = ['Queued','Preflight','Preparing','Filling','Ready to Submit','Submitting'] %}
-{% if runs %}<div class="banner" data-refresh="6"><span>Applying now ({{ runs|length }} run{{ '' if runs|length == 1 else 's' }}). This page refreshes itself.</span><a class="btn sm" href="/console">Watch</a></div>{% endif %}
+<div class="page-head"><div><h1>Shortlist &amp; apply</h1>
+  <p class="sub">Nothing is sent until you tick the confirmation and press Apply. Today: {{ today }} of {{ limit }} applications sent (<a href="/settings">daily limit</a>).</p></div></div>
+{% set busy = ['Queued', 'Preflight', 'Preparing', 'Filling', 'Ready to Submit', 'Submitting'] %}
+{% if runs %}<div class="banner" data-refresh="6"><span>Applying now. This page refreshes itself while it works.</span><a class="btn sm" href="/console">Watch it live</a></div>{% endif %}
 {% if not resume %}<div class="flash err">Upload a resume and make it your default before applying. <a href="/resumes">Resumes →</a></div>{% endif %}
 
 {% set waiting_rows = rows|selectattr('0.state', 'in', ['Awaiting User', 'Submission Unconfirmed'])|list %}
-{% if waiting_rows %}<h2>Waiting for you</h2>
+{% if waiting_rows %}<h2>Needs you <span class="pill">{{ waiting_rows|length }}</span></h2>
 {% for a, j in waiting_rows %}{% set pol, automated, lv = info[a.id] %}
-<div class="card wait"><div class="row" style="align-items:start"><div style="flex:3"><a href="/jobs/{{ j.id }}"><b>{{ j.title }}</b></a> · {{ j.company }} <span class="badge b-queued">{{ a.state }}</span>
-  <p class="small">{{ a.blocker }}</p>{% if a.error %}<p class="small muted">{{ a.error }}</p>{% endif %}</div>
+<div class="card wait"><div class="row" style="align-items:start">
+  <div style="flex:3"><div class="list-item" style="padding:0;border:0"><span class="logo-tile" style="--h: {{ j.company|hue }}">{{ j.company|initials }}</span>
+    <div class="grow"><a href="/jobs/{{ j.id }}"><b>{{ j.title }}</b></a> · {{ j.company }} <span class="badge state-{{ a.state|lower|replace(' ', '-') }}">{{ a.state|state_label }}</span></div></div>
+    <p class="small">{{ a.blocker }}</p>{% if a.error %}<p class="small muted">{{ a.error }}</p>{% endif %}</div>
   <div class="actions" style="flex:0 1 auto;margin:0"><a class="btn sm ghost" href="{{ (j.apply_url or j.url)|safe_url }}" target="_blank" rel="noopener noreferrer">Open job ↗</a>
     {% if lv %}<a class="btn sm ghost" href="/letters/{{ j.id }}/pdf">Cover letter PDF</a>{% endif %}
     {% if a.state == 'Awaiting User' and not a.pending %}<form class="inline" method="post" action="/applications/{{ a.id }}/retry">{{ csrf_field(csrf) }}<button class="btn sm">Retry</button></form>{% endif %}
@@ -19,30 +21,35 @@
     {% for q in a.pending %}<label for="f{{ a.id }}-a_{{ loop.index0 }}">{{ q.question }}{% if q.sensitive %} <span class="badge b-flag">sensitive</span>{% endif %}</label>
       {% if q.options %}<select id="f{{ a.id }}-a_{{ loop.index0 }}" name="a_{{ loop.index0 }}"><option value="">choose…</option>{% for o in q.options %}<option>{{ o }}</option>{% endfor %}</select>
       {% else %}<input type="text" id="f{{ a.id }}-a_{{ loop.index0 }}" name="a_{{ loop.index0 }}">{% endif %}{% endfor %}
-    <p class="hint">Your answers are saved to Answers and reused next time.</p>
+    <p class="hint">Your answers are saved to Saved answers and reused next time.</p>
     <div class="actions"><button class="btn">Save answers and continue</button></div></form>{% endif %}
 </div>{% endfor %}{% endif %}
 
 {% set ready = rows|selectattr('0.state', 'in', ['Selected', 'Failed'])|list %}
-<form class="card" method="post" action="/queue/apply">{{ csrf_field(csrf) }}<h2>Shortlisted</h2>
-  <table><tr><th><input type="checkbox" data-select-all="app" checked></th><th>Job</th><th>Score</th><th>How</th><th>Cover letter</th><th></th></tr>
-  {% for a, j in ready %}{% set pol, automated, lv = info[a.id] %}<tr>
-    <td><input type="checkbox" name="app" value="{{ a.id }}" checked></td>
-    <td><a href="/jobs/{{ j.id }}"><b>{{ j.title }}</b></a><br><span class="small muted">{{ j.company }} · {{ pol.name }}</span>
-      {% if a.state == 'Failed' %}<div class="small"><span class="badge b-failed">failed</span> {{ a.error }}</div>{% endif %}</td>
-    <td class="score">{{ a.score_at_apply if a.score_at_apply is not none else '—' }}</td>
-    <td><span class="badge b-{{ 'pass' if automated else 'flag' }}">{{ 'automated' if automated else 'assisted' }}</span></td>
-    <td class="small">{% if lv %}<a href="/letters/{{ j.id }}">v{{ lv.number }}</a>{% if lv.issues %} <span class="badge b-flag">{{ lv.issues|length }}</span>{% endif %}{% else %}<a href="/letters/{{ j.id }}">written on apply</a>{% endif %}</td>
-    <td>{% if a.state == 'Selected' %}<button class="btn sm bad" formaction="/queue/{{ a.id }}/remove" formnovalidate>Remove</button>{% endif %}</td></tr>
-  {% else %}<tr><td colspan="6" class="empty">Shortlist jobs from <a href="/jobs">Job search</a>.</td></tr>{% endfor %}</table>
-  {% if ready %}<label class="check confirm"><input type="checkbox" name="confirm" value="yes" required> I have checked these jobs. Submit them with my default resume ({{ resume.label if resume else 'none' }}), my cover letters and my saved answers. Assisted sites are only prepared for me.</label>
-  <div class="actions"><button class="btn">Apply to selected</button></div>{% endif %}
+<h2 style="margin-top:8px">Ready to apply</h2>
+<form method="post" action="/queue/apply">{{ csrf_field(csrf) }}
+  {% if ready %}<label class="check" style="margin:0 0 10px"><input type="checkbox" data-select-all="app" checked> Select all</label>{% endif %}
+  {% for a, j in ready %}{% set pol, automated, lv = info[a.id] %}
+  <article class="app-card"><input type="checkbox" name="app" value="{{ a.id }}" checked aria-label="Apply to {{ j.title }} at {{ j.company }}">
+    <span class="logo-tile" style="--h: {{ j.company|hue }}" aria-hidden="true">{{ j.company|initials }}</span>
+    <div class="jc-main"><a class="jc-title" href="/jobs/{{ j.id }}">{{ j.title }}</a><div class="jc-company">{{ j.company }}</div>
+      <div class="chips"><span class="chip">{{ pol.name }}</span><span class="badge b-{{ 'pass' if automated else 'flag' }}">{{ 'app submits for you' if automated else 'you submit' }}</span>
+        <span class="chip">cover letter: {% if lv %}<a href="/letters/{{ j.id }}">v{{ lv.number }}</a>{% if lv.issues %} ({{ lv.issues|length }} to check){% endif %}{% else %}<a href="/letters/{{ j.id }}">written on apply</a>{% endif %}</span></div>
+      {% if a.state == 'Failed' %}<div class="jc-note"><span class="badge state-failed">failed last time</span> {{ a.error }}</div>{% elif a.blocker %}<div class="jc-note">{{ a.blocker }}</div>{% endif %}</div>
+    <div class="jc-side">{% if a.score_at_apply is not none %}<div class="ring" style="--p: {{ a.score_at_apply }}"><b>{{ a.score_at_apply }}</b></div>{% endif %}
+      {% if a.state == 'Selected' %}<button class="btn sm bad" formaction="/queue/{{ a.id }}/remove" formnovalidate>Remove</button>{% endif %}</div>
+  </article>
+  {% else %}<div class="card empty">Your shortlist is empty. <a href="/jobs">Find jobs</a> and press Shortlist on the ones you like.</div>{% endfor %}
+  {% if ready %}<div class="card confirm-panel">
+    <label class="check confirm" style="margin:0"><input type="checkbox" name="confirm" value="yes" required> I have checked these jobs. Submit them with my default resume ({{ resume.label if resume else 'none' }}), my cover letters and my saved answers. Jobs marked "you submit" are only prepared for me.</label>
+    <div class="actions"><button class="btn lg">Apply to selected</button></div></div>{% endif %}
 </form>
 
 {% set moving = rows|selectattr('0.state', 'in', busy)|list %}
-{% if moving %}<div class="card"><h2>In progress</h2><table>{% for a, j in moving %}<tr><td><b>{{ j.title }}</b> · {{ j.company }}</td><td><span class="badge b-queued">{{ a.state }}</span></td></tr>{% endfor %}</table></div>{% endif %}
+{% if moving %}<div class="card"><h2>In progress</h2>{% for a, j in moving %}<div class="list-item"><span class="logo-tile" style="--h: {{ j.company|hue }}">{{ j.company|initials }}</span>
+  <div class="grow"><b>{{ j.title }}</b> · {{ j.company }}</div><span class="badge state-{{ a.state|lower|replace(' ', '-') }}">{{ a.state|state_label }}</span></div>{% endfor %}</div>{% endif %}
 
 {% set blocked = rows|selectattr('0.state', 'equalto', 'Blocked')|list %}
-{% if blocked %}<div class="card"><h2>Blocked</h2><table>{% for a, j in blocked %}<tr><td><b>{{ j.title }}</b> · {{ j.company }}<div class="small muted">{{ a.blocker }}</div></td>
-  <td><form method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}<input type="hidden" name="job" value="{{ j.id }}"><button class="btn sm ghost" name="action" value="select">Shortlist again</button></form></td></tr>{% endfor %}</table></div>{% endif %}
+{% if blocked %}<div class="card"><h2>Blocked</h2>{% for a, j in blocked %}<div class="list-item"><div class="grow"><b>{{ j.title }}</b> · {{ j.company }}<div class="small muted">{{ a.blocker }}</div></div>
+  <form method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}<input type="hidden" name="job" value="{{ j.id }}"><button class="btn sm ghost" name="action" value="select">Shortlist again</button></form></div>{% endfor %}</div>{% endif %}
 {% endblock %}

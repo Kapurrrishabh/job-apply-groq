@@ -1,14 +1,17 @@
-{% extends "base.html" %}{% block title %}My Applications{% endblock %}
+{% extends "base.html" %}{% block title %}Applications{% endblock %}
 {% block body %}
-<h1>My applications</h1>
-<p class="sub">Every application with what was actually sent. "Submitted" means the site confirmed it, or you did.</p>
-<form class="card" method="get" action="/applications"><div class="row"><div style="flex:3"><label for="f-q">Search</label><input id="f-q" type="text" name="q" value="{{ q }}" placeholder="title or company"></div>
-  <div><label for="f-state">State</label><select id="f-state" name="state"><option value="">all</option>{% for st in states %}<option {{ 'selected' if st == state }}>{{ st }}</option>{% endfor %}</select></div>
-  <div style="flex:none"><button class="btn ghost">Filter</button></div></div></form>
-<div class="card"><table><tr><th>Job</th><th>State</th><th>Submitted</th><th>Evidence</th></tr>
-{% for a, j in rows %}<tr><td><a href="/applications/{{ a.id }}"><b>{{ j.title }}</b></a><br><span class="small muted">{{ j.company }} · {{ j.platform }}</span></td>
-  <td><span class="badge b-{{ 'submitted' if a.state == 'Submitted' else 'failed' if a.state in ('Failed','Blocked') else 'queued' }}">{{ a.state }}</span></td>
-  <td class="small">{{ a.submitted_at.strftime('%b %d %Y %H:%M') if a.submitted_at else '—' }}</td>
-  <td class="small muted">{{ (a.evidence or {}).get('kind', '') }}{% if a.reference %} · {{ a.reference }}{% endif %}</td></tr>
-{% else %}<tr><td colspan="4" class="empty">No applications yet.</td></tr>{% endfor %}</table></div>
+<div class="page-head"><div><h1>My applications</h1><p class="sub">Every application with exactly what was sent. "Submitted" means the site confirmed it, or you did.</p></div>
+  <form method="get" action="/applications" role="search" style="min-width:260px">{% if state %}<input type="hidden" name="state" value="{{ state }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" aria-label="Search applications" placeholder="Search title or company"></form></div>
+<nav class="tabs" aria-label="Filter by status"><a href="/applications?q={{ q|urlencode }}" class="{{ 'on' if not state }}">All <span class="count">{{ total }}</span></a>
+  {% for st in states %}<a href="/applications?state={{ st|urlencode }}&q={{ q|urlencode }}" class="{{ 'on' if st == state }}">{{ st|state_label }} <span class="count">{{ counts[st] }}</span></a>{% endfor %}</nav>
+{% for a, j in rows %}
+<article class="app-card"><span class="logo-tile" style="--h: {{ j.company|hue }}" aria-hidden="true">{{ j.company|initials }}</span>
+  <div class="jc-main"><a class="jc-title" href="/applications/{{ a.id }}">{{ j.title }}</a><div class="jc-company">{{ j.company }}</div>
+    <div class="chips"><span class="chip">{{ platform_name(j.platform) }}</span>{% if a.submitted_at %}<span class="chip">sent {{ a.submitted_at.strftime('%b %d %Y') }}</span>{% endif %}
+      {% if a.reference %}<span class="chip">ref {{ a.reference }}</span>{% endif %}{% if (a.evidence or {}).get('kind') %}<span class="chip">proof: {{ {'page': 'confirmation page', 'user_confirmed': 'confirmed by you', 'imported': 'earlier version'}.get(a.evidence.kind, a.evidence.kind) }}</span>{% endif %}</div>
+    {% if a.blocker and a.state != 'Submitted' %}<div class="jc-note">{{ a.blocker }}</div>{% endif %}</div>
+  <div class="jc-side"><span class="badge state-{{ a.state|lower|replace(' ', '-') }}">{{ a.state|state_label }}</span><a class="small" href="/applications/{{ a.id }}">View what was sent →</a></div>
+</article>
+{% else %}<div class="card empty">No applications here yet. <a href="/queue">Go to your shortlist</a> to apply.</div>{% endfor %}
 {% endblock %}

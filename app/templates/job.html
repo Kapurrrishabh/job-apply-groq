@@ -1,36 +1,61 @@
 {% extends "base.html" %}{% block title %}{{ j.title }}{% endblock %}
 {% block body %}
-<p class="small"><a href="/jobs">← Job search</a></p>
-<h1>{{ j.title }}{% if j.bookmarked %} ★{% endif %}</h1>
-<p class="sub">{{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}{% if j.work_mode %} · {{ j.work_mode }}{% endif %}{% if j.employment_type %} · {{ j.employment_type }}{% endif %}{% if j.salary_text %} · {{ j.salary_text }}{% endif %}
-  {% if j.posted_at %} · posted {{ j.posted_at.strftime('%b %d') }}{% endif %}{% if not j.active %} · <span class="badge b-hidden">closed</span>{% endif %}</p>
-<div class="actions" style="margin-bottom:16px">
-  <form class="inline" method="post" action="/jobs/{{ j.id }}/rank">{{ csrf_field(csrf) }}<button class="btn ghost">{{ 'Re-rank' if sc else 'Rank this job' }}</button></form>
-  {% if not app_row %}<form class="inline" method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}<input type="hidden" name="job" value="{{ j.id }}"><button class="btn" name="action" value="select">Add to application queue</button></form>
-  {% else %}<a class="btn ghost" href="{{ '/applications/%d'|format(app_row.id) if app_row.state in ('Submitted','Duplicate') else '/queue' }}">{{ app_row.state }}</a>{% endif %}
-  <form class="inline" method="post" action="/jobs/{{ j.id }}/tailor">{{ csrf_field(csrf) }}<button class="btn ghost">Tailor my CV</button></form>
-  <a class="btn ghost" href="/letters/{{ j.id }}">{{ 'Edit cover letter' if letter else 'Write cover letter' }}</a>
-  <form class="inline" method="post" action="/jobs/{{ j.id }}/bookmark">{{ csrf_field(csrf) }}<button class="btn ghost">{{ '★ Bookmarked' if j.bookmarked else '☆ Bookmark' }}</button></form>
-  <a class="btn ghost" href="{{ j.url|safe_url }}" target="_blank" rel="noopener noreferrer">Open posting ↗</a>
-  <form class="inline" method="post" action="/jobs/{{ j.id }}/open">{{ csrf_field(csrf) }}<button class="btn ghost">Open in app browser</button></form></div>
-<div class="grid g2">
-<div class="card"><h2>How you match</h2>
-  {% if sc %}{% set r = sc.result %}
-  <p><span class="stat">{{ sc.score }}</span> <span class="stat-label">/ 100 · {{ sc.recommendation }} · {{ sc.confidence }} confidence</span></p>
-    <div><table>{% for name, d in r.dimensions.items() %}<tr><td class="small"><b>{{ name }}</b><div class="muted">{{ d.basis }}</div></td><td style="width:120px">{% if d.score is not none %}<div class="bar"><i style="width:{{ d.score }}%"></i></div><span class="small">{{ d.score }}</span>{% else %}<span class="small muted">no info</span>{% endif %}</td></tr>{% endfor %}</table></div>
-  {% if r.strengths %}<h3>Strengths</h3><ul class="reasons">{% for x in r.strengths %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
-  {% if r.gaps %}<h3>Gaps</h3><ul class="reasons">{% for x in r.gaps %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
-  {% if r.requirements_missing %}<h3>Requirements you don't show</h3><p class="small muted">{{ r.requirements_missing|join(', ') }}</p>{% endif %}
-  <p class="small muted">Ranked against profile version {{ sc.profile_version }} on {{ sc.created_at.strftime('%b %d %H:%M') }}.</p>
-  {% else %}<p class="empty">Not ranked yet.</p>{% endif %}
-  {% set g = j.gates or {} %}{% if g.verdict %}<h3>Fit check <span class="badge b-{{ g.verdict }}">{{ g.verdict }}</span></h3><ul class="reasons">{% for x in g.reasons or [] %}<li>{{ x }}</li>{% else %}<li>No problems found.</li>{% endfor %}</ul>{% endif %}</div>
-<div class="card"><h2>How applying works here</h2>
-  <p><span class="badge b-{{ 'pass' if automated else 'flag' }}">{{ 'automated after you authorize' if automated else 'assisted: you submit' }}</span></p>
-  <p class="small muted">{{ pol.name }}: {{ pol.terms_note }}{% if j.ats %} · employer system: {{ j.ats }}{% endif %}</p>
-  <p class="small">Resume: {% if tailored and tailored.approved %}<a href="/resumes/{{ tailored.id }}">{{ tailored.label }}</a> (tailored){% elif resume %}<a href="/resumes/{{ resume.id }}">{{ resume.label }}</a>{% else %}<a href="/resumes">upload one first</a>{% endif %}
-    {% if tailored and not tailored.approved %}<br><a href="/resumes/{{ tailored.id }}">A tailored CV is waiting for your approval</a>{% endif %}<br>
-    Cover letter: {% if letter %}version {{ letter.number }}{% if letter.issues %} <span class="badge b-flag">{{ letter.issues|length }} warning(s)</span>{% endif %}{% else %}written when you apply{% endif %}</p>
-  {% if j.skills %}<h3>Skills in the posting</h3><p class="small">{{ j.skills|join(', ') }}</p>{% endif %}</div>
+<p class="small"><a href="/jobs">← Find jobs</a></p>
+<section class="card">
+  <div class="job-head">
+    <span class="logo-tile lg" style="--h: {{ j.company|hue }}" aria-hidden="true">{{ j.company|initials }}</span>
+    <div class="jc-main">
+      <h1>{{ j.title }}{% if j.bookmarked %} ★{% endif %}</h1>
+      <div class="jc-company">{{ j.company or 'Company not stated' }}</div>
+      <div class="chips">{% if j.location %}<span class="chip">📍 {{ j.location }}</span>{% endif %}{% if j.work_mode %}<span class="chip">{{ j.work_mode }}</span>{% endif %}
+        {% if j.employment_type %}<span class="chip">{{ j.employment_type }}</span>{% endif %}{% if j.salary_text %}<span class="chip">💰 {{ j.salary_text }}</span>{% endif %}
+        <span class="chip">{{ pol.name }}</span>{% if j.posted_at %}<span class="chip">posted {{ j.posted_at.strftime('%b %d') }}</span>{% endif %}{% if not j.active %}<span class="chip">closed</span>{% endif %}</div>
+    </div>
+    <div class="jc-side">{% if sc %}<div class="ring lg" style="--p: {{ sc.score }}" title="Match score out of 100"><b>{{ sc.score }}</b></div><small>{{ sc.recommendation }}</small>{% else %}<small>not ranked yet</small>{% endif %}</div>
+  </div>
+  <div class="actions">
+    {% if not app_row %}<form class="inline" method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}<input type="hidden" name="job" value="{{ j.id }}"><button class="btn" name="action" value="select">Shortlist to apply</button></form>
+    {% else %}<a class="btn" href="{{ '/applications/%d'|format(app_row.id) if app_row.state in ('Submitted', 'Duplicate') else '/queue' }}">{{ app_row.state|state_label }} →</a>{% endif %}
+    <form class="inline" method="post" action="/jobs/{{ j.id }}/rank">{{ csrf_field(csrf) }}<button class="btn ghost">{{ 'Re-rank' if sc else 'Rank this job' }}</button></form>
+    <a class="btn ghost" href="/letters/{{ j.id }}">{{ 'Edit cover letter' if letter else 'Write cover letter' }}</a>
+    <form class="inline" method="post" action="/jobs/{{ j.id }}/tailor">{{ csrf_field(csrf) }}<button class="btn ghost">Tailor my CV</button></form>
+    <form class="inline" method="post" action="/jobs/{{ j.id }}/bookmark">{{ csrf_field(csrf) }}<button class="btn ghost">{{ '★ Bookmarked' if j.bookmarked else '☆ Bookmark' }}</button></form>
+    <a class="btn ghost" href="{{ j.url|safe_url }}" target="_blank" rel="noopener noreferrer">Open posting ↗</a>
+    <form class="inline" method="post" action="/jobs/{{ j.id }}/open">{{ csrf_field(csrf) }}<button class="btn ghost">Open in app browser</button></form>
+  </div>
+</section>
+
+<div class="split">
+  <section>
+    <div class="card"><h2>How you match</h2>
+      {% if sc %}{% set r = sc.result %}
+      <p class="small muted">{{ sc.confidence|capitalize }} confidence · ranked against profile version {{ sc.profile_version }} on {{ sc.created_at.strftime('%b %d %H:%M') }}</p>
+      <table>{% for name, d in r.dimensions.items() %}<tr><td class="small"><b>{{ name|capitalize }}</b><div class="muted">{{ d.basis }}</div></td>
+        <td style="width:130px">{% if d.score is not none %}<div class="bar"><i style="width:{{ d.score }}%"></i></div><span class="small">{{ d.score }}</span>{% else %}<span class="small muted">no info</span>{% endif %}</td></tr>{% endfor %}</table>
+      <div class="grid g2" style="margin:12px 0 0">
+        <div>{% if r.strengths %}<h3>Strengths</h3><ul class="reasons">{% for x in r.strengths %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}</div>
+        <div>{% if r.gaps %}<h3>Gaps</h3><ul class="reasons">{% for x in r.gaps %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}</div></div>
+      {% if r.requirements_missing %}<h3>Requirements you don't show</h3><p class="small muted">{{ r.requirements_missing|join(', ') }}</p>{% endif %}
+      {% else %}<p class="empty">Press <b>Rank this job</b> to see how well it fits you, with the reasons.</p>{% endif %}
+      {% set g = j.gates or {} %}{% if g.verdict %}<h3>Your rules <span class="badge b-{{ g.verdict }}">{{ {'pass': 'fits', 'flag': 'check', 'fail': "doesn't fit"}[g.verdict] }}</span></h3>
+      <ul class="reasons">{% for x in g.reasons or [] %}<li>{{ x }}</li>{% else %}<li>Location, pay, experience and company type all fit.</li>{% endfor %}</ul>{% endif %}</div>
+    <div class="card"><h2>About the job</h2>{% if j.skills %}<div class="chips" style="margin-bottom:10px">{% for s in j.skills %}<span class="chip">{{ s }}</span>{% endfor %}</div>{% endif %}
+      <div class="desc">{{ j.description or 'No description.' }}</div></div>
+  </section>
+  <aside>
+    <div class="card"><h2>How applying works here</h2>
+      <p><span class="badge b-{{ 'pass' if automated else 'flag' }}">{{ 'automated after you authorize' if automated else 'assisted: you submit' }}</span></p>
+      {% if automated %}<ol class="how"><li>Shortlist this job.</li><li>On Shortlist, tick the confirmation and press Apply.</li>
+        <li>The app fills the form with your profile, resume, cover letter and saved answers. It pauses if the site asks something new or shows a CAPTCHA.</li>
+        <li>It submits and saves the site's confirmation in Applications.</li></ol>
+      {% else %}<ol class="how"><li>Shortlist this job and press Apply on Shortlist.</li><li>The app prepares your cover letter and answers.</li>
+        <li>You open the job and submit it on {{ pol.name }}.</li><li>Press "I submitted it" so it's tracked.</li></ol>{% endif %}
+      <p class="small muted">{{ pol.terms_note }}{% if j.ats %} · employer system: {{ j.ats }}{% endif %}</p></div>
+    <div class="card"><h2>What will be sent</h2>
+      <p class="small"><b>Resume:</b> {% if tailored and tailored.approved %}<a href="/resumes/{{ tailored.id }}">{{ tailored.label }}</a> (tailored){% elif resume %}<a href="/resumes/{{ resume.id }}">{{ resume.label }}</a>{% else %}<a href="/resumes">upload one first</a>{% endif %}
+        {% if tailored and not tailored.approved %}<br><a href="/resumes/{{ tailored.id }}">A tailored CV is waiting for your approval</a>{% endif %}</p>
+      <p class="small"><b>Cover letter:</b> {% if letter %}<a href="/letters/{{ j.id }}">version {{ letter.number }}</a>{% if letter.issues %} <span class="badge b-flag">{{ letter.issues|length }} to check</span>{% endif %}{% else %}written when you apply, or <a href="/letters/{{ j.id }}">write it now</a>{% endif %}</p>
+      <p class="small"><b>Answers:</b> from your profile and <a href="/answers">saved answers</a>; anything new waits for you.</p></div>
+  </aside>
 </div>
-<div class="card"><h2>Description</h2><div class="desc">{{ j.description or 'No description.' }}</div></div>
 {% endblock %}

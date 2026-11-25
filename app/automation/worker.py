@@ -34,14 +34,6 @@ def alive() -> bool:
     return bool(_thread and _thread.is_alive())
 
 
-def waiting_for(user_id: int) -> int:
-    s = db.session()
-    try:
-        return len(s.scalars(select(db.Application.id).where(db.Application.user_id == user_id, db.Application.state.in_([S.AWAITING, S.UNCONFIRMED]))).all())
-    finally:
-        s.close()
-
-
 def recover(s) -> None:
     for ex in s.scalars(select(db.Execution).where(db.Execution.status == "running")):
         ex.status, ex.finished_at, ex.summary = "failed", db.now(), "Interrupted by an app restart"

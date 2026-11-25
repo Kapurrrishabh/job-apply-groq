@@ -1,0 +1,21 @@
+<article class="job-card">
+  {% if selectable %}<input type="checkbox" name="job" value="{{ j.id }}" form="bulk" aria-label="Select {{ j.title }} at {{ j.company }}">{% endif %}
+  <span class="logo-tile" style="--h: {{ j.company|hue }}" aria-hidden="true">{{ j.company|initials }}</span>
+  <div class="jc-main">
+    <a class="jc-title" href="/jobs/{{ j.id }}">{{ j.title }}</a>{% if j.bookmarked %} <span title="Bookmarked">★</span>{% endif %}
+    <div class="jc-company">{{ j.company or 'Company not stated' }}</div>
+    <div class="chips">
+      {% if j.location %}<span class="chip">📍 {{ j.location }}</span>{% endif %}{% if j.work_mode %}<span class="chip">{{ j.work_mode }}</span>{% endif %}
+      {% if j.employment_type %}<span class="chip">{{ j.employment_type }}</span>{% endif %}{% if j.salary_text %}<span class="chip">💰 {{ j.salary_text }}</span>{% endif %}
+      <span class="chip">{{ platform_name(j.platform) }}</span>{% if j.posted_at %}<span class="chip">posted {{ j.posted_at.strftime('%b %d') }}</span>{% endif %}
+      {% if not j.active %}<span class="chip">closed</span>{% endif %}{% if j.raw.get('duplicate_of') %}<span class="chip">possible duplicate</span>{% endif %}
+    </div>
+    {% set g = j.gates or {} %}{% if g.verdict and g.verdict != 'pass' %}<div class="jc-note"><span class="badge b-{{ g.verdict }}">{{ 'check this' if g.verdict == 'flag' else "doesn't fit your rules" }}</span> {{ (g.reasons or [])[:2]|join('; ') }}</div>{% endif %}
+  </div>
+  <div class="jc-side">
+    {% if sc %}<div class="ring" style="--p: {{ sc.score }}" title="Match score out of 100"><b>{{ sc.score }}</b></div><small>{{ sc.recommendation }}</small>
+    {% else %}<small>not ranked yet</small>{% endif %}
+    {% if a %}<a class="badge state-{{ a.state|lower|replace(' ', '-') }}" href="{{ '/applications/%d'|format(a.id) if a.state in ('Submitted', 'Duplicate') else '/queue' }}">{{ a.state|state_label }}</a>
+    {% else %}<form method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}<input type="hidden" name="job" value="{{ j.id }}"><button class="btn sm" name="action" value="select">Shortlist</button></form>{% endif %}
+  </div>
+</article>

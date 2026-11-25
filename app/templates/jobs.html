@@ -1,54 +1,62 @@
-{% extends "base.html" %}{% block title %}Job Search{% endblock %}
+{% extends "base.html" %}{% block title %}Find jobs{% endblock %}
 {% block body %}
-<h1>Job search</h1>
-<p class="sub">Search sites that allow it, import jobs from sites that don't, then rank, shortlist and apply.</p>
-<div class="grid g2">
-<form class="card" method="post" action="/jobs/search">{{ csrf_field(csrf) }}<h2>Search</h2>
-  <div class="row"><div style="flex:2"><label for="f-query">Roles <span class="hint">comma separated, up to 5</span></label><input id="f-query" type="text" name="query" value="{{ roles[:3]|join(', ') }}" required></div>
-    <div><label for="f-location">Location</label><input id="f-location" type="text" name="location" value="{{ locations[0] if locations else 'India' }}"></div></div>
-  <div class="row"><div><label for="f-platform">Source</label><select id="f-platform" name="platform">{% for k, p in platforms.items() if p.discovery in ('api', 'test') %}<option value="{{ k }}">{{ p.name }}</option>{% endfor %}</select></div>
-    <div><label for="f-days">Posted within (days)</label><input id="f-days" type="number" name="days" min="1" max="60" value="14"></div></div>
-  <label class="check"><input type="checkbox" name="save" value="1"> Save this search</label>
-  <div class="actions"><button class="btn">Search</button></div>
-  <p class="hint">LinkedIn, Naukri and Internshala don't allow automated searching. Paste jobs from them on the right.</p></form>
-<div class="card"><h2>Add a job yourself</h2>
-  <details><summary>Paste a job from any site</summary>
-  <form method="post" action="/jobs/import">{{ csrf_field(csrf) }}
-    <div class="row"><div><label for="f-url">Job link</label><input id="f-url" type="text" name="url" placeholder="https://…"></div><div><label for="f-title">Title</label><input id="f-title" type="text" name="title" required></div></div>
-    <div class="row"><div><label for="f-company">Company</label><input id="f-company" type="text" name="company"></div><div><label for="f-import-location">Location</label><input id="f-import-location" type="text" name="location"></div><div><label for="f-salary">Salary</label><input id="f-salary" type="text" name="salary"></div></div>
-    <label for="f-description">Description</label><textarea id="f-description" name="description" required></textarea>
-    <div class="actions"><button class="btn">Import</button></div></form></details>
-  <form method="post" action="/jobs/import-page" class="actions">{{ csrf_field(csrf) }}
-    <button class="btn ghost" name="platform" value="wellfound">Import the Wellfound job</button><button class="btn ghost" name="platform" value="internshala">Import the Internshala job</button></form>
-  <p class="hint">Sign in on Settings, browse the site in the app's browser window, open a job, then press Import. One page is read, on your click.</p>
-  {% if saved or history %}<h2 style="margin-top:16px">Searches</h2><table>
-  {% for ss in saved %}<tr><td><b>{{ ss.name }}</b> <span class="badge b-pass">saved</span></td><td class="small muted">{{ ss.result_count }} results</td>
-    <td class="nowrap"><form class="inline" method="post" action="/searches/{{ ss.id }}/run">{{ csrf_field(csrf) }}<button class="btn sm ghost">Run</button></form>
-    <form class="inline" method="post" action="/searches/{{ ss.id }}/delete">{{ csrf_field(csrf) }}<button class="btn sm bad">×</button></form></td></tr>{% endfor %}
-  {% for ss in history if not ss.saved %}<tr><td class="small">{{ ss.name }}</td><td class="small muted">{{ ss.result_count }} results</td><td class="small muted">{{ ss.last_run_at.strftime('%b %d %H:%M') if ss.last_run_at else '' }}</td></tr>{% endfor %}</table>{% endif %}</div>
+<div class="page-head"><div><h1>Find jobs</h1><p class="sub">Search the sites that allow it, or bring in jobs you found yourself. Then rank them and shortlist the best.</p></div></div>
+
+<section class="card">
+  <form method="post" action="/jobs/search">{{ csrf_field(csrf) }}
+    <div class="row">
+      <div style="flex:2"><label for="f-query">Roles <span class="hint">comma separated, up to 5</span></label><input id="f-query" type="text" name="query" value="{{ roles[:3]|join(', ') }}" placeholder="e.g. ML intern, backend engineer" required></div>
+      <div><label for="f-location">Location</label><input id="f-location" type="text" name="location" value="{{ locations[0] if locations else 'India' }}"></div>
+      <div><label for="f-platform">Source</label><select id="f-platform" name="platform">{% for k, p in platforms.items() if p.discovery in ('api', 'test') %}<option value="{{ k }}">{{ p.name }}</option>{% endfor %}</select></div>
+      <div style="max-width:150px"><label for="f-days">Posted within (days)</label><input id="f-days" type="number" name="days" min="1" max="60" value="14"></div>
+      <div style="flex:none"><button class="btn lg">Search</button></div>
+    </div>
+    <label class="check"><input type="checkbox" name="save" value="1"> Save this search</label>
+  </form>
+  <div class="grid g2" style="margin:12px 0 0">
+    <details><summary>Paste a job from any site</summary>
+      <form method="post" action="/jobs/import">{{ csrf_field(csrf) }}
+        <div class="row"><div><label for="f-import-url">Job link</label><input id="f-import-url" type="text" name="url" placeholder="https://…"></div><div><label for="f-title">Title</label><input id="f-title" type="text" name="title" required></div></div>
+        <div class="row"><div><label for="f-company">Company</label><input id="f-company" type="text" name="company"></div><div><label for="f-import-location">Location</label><input id="f-import-location" type="text" name="location"></div><div><label for="f-salary">Salary</label><input id="f-salary" type="text" name="salary"></div></div>
+        <label for="f-description">Description</label><textarea id="f-description" name="description" required></textarea>
+        <div class="actions"><button class="btn">Import</button></div></form>
+      <p class="hint">Best for LinkedIn, Naukri and other sites that don't allow automated searching.</p></details>
+    <details><summary>Import the job open in the app's browser</summary>
+      <p class="hint">Sign in on Settings, browse Internshala or Wellfound in the app's browser window, open a job, then press Import. One page is read, on your click.</p>
+      <form method="post" action="/jobs/import-page" class="actions">{{ csrf_field(csrf) }}
+        <button class="btn ghost" name="platform" value="internshala">Import the Internshala job</button><button class="btn ghost" name="platform" value="wellfound">Import the Wellfound job</button></form></details>
+  </div>
+</section>
+
+<div class="split left">
+  <aside>
+    <form class="card filters" method="get" action="/jobs"><h2>Filter</h2>
+      <label for="f-q">Keyword</label><input id="f-q" type="text" name="q" value="{{ f.q }}">
+      <label for="f-filter-platform">Source</label><select id="f-filter-platform" name="platform"><option value="">all</option>{% for k, p in platforms.items() %}<option value="{{ k }}" {{ 'selected' if k == f.platform }}>{{ p.name }}</option>{% endfor %}<option value="imported" {{ 'selected' if f.platform == 'imported' }}>earlier version</option></select>
+      <label for="f-verdict">Fit check</label><select id="f-verdict" name="verdict"><option value="">all</option>{% for v, lbl in [('pass', 'fits your rules'), ('flag', 'check these'), ('fail', "doesn't fit")] %}<option value="{{ v }}" {{ 'selected' if v == f.verdict }}>{{ lbl }}</option>{% endfor %}</select>
+      <label for="f-min_score">Minimum score</label><input id="f-min_score" type="number" name="min_score" min="0" max="100" value="{{ f.min_score or '' }}">
+      <label for="f-mode">Work mode</label><select id="f-mode" name="mode"><option value="">any</option>{% for m in ['remote', 'hybrid', 'onsite'] %}<option {{ 'selected' if m == f.mode }}>{{ m }}</option>{% endfor %}</select>
+      <label for="f-jtype">Job type</label><select id="f-jtype" name="jtype"><option value="">any</option>{% for t in ['internship', 'full-time', 'part-time', 'contract'] %}<option {{ 'selected' if t == f.jtype }}>{{ t }}</option>{% endfor %}</select>
+      <label for="f-sort">Sort by</label><select id="f-sort" name="sort">{% for k, lbl in [('score', 'best match'), ('newest', 'newest'), ('company', 'company')] %}<option value="{{ k }}" {{ 'selected' if k == f.sort }}>{{ lbl }}</option>{% endfor %}</select>
+      <label class="check"><input type="checkbox" name="bookmarked" value="1" {{ 'checked' if f.bookmarked }}> ★ Bookmarked only</label>
+      <div class="actions"><button class="btn ghost">Apply filters</button><a href="/jobs" class="small" style="align-self:center">Clear</a></div></form>
+    {% if saved or history %}<div class="card"><h2>Your searches</h2>
+      {% for ss in saved %}<div class="list-item"><div class="grow"><b>{{ ss.name }}</b> <span class="badge b-pass">saved</span><div class="small muted">{{ ss.result_count }} results</div></div>
+        <form class="inline" method="post" action="/searches/{{ ss.id }}/run">{{ csrf_field(csrf) }}<button class="btn sm ghost">Run</button></form>
+        <form class="inline" method="post" action="/searches/{{ ss.id }}/delete">{{ csrf_field(csrf) }}<button class="btn sm bad" aria-label="Remove {{ ss.name }}">×</button></form></div>{% endfor %}
+      {% for ss in history if not ss.saved %}<div class="list-item"><div class="grow small">{{ ss.name }}<div class="muted">{{ ss.result_count }} results{% if ss.last_run_at %} · {{ ss.last_run_at.strftime('%b %d %H:%M') }}{% endif %}</div></div></div>{% endfor %}</div>{% endif %}
+  </aside>
+
+  <section>
+    <form id="bulk" class="card bulkbar" method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}
+      <label class="check" style="margin:0"><input type="checkbox" data-select-all="job"> Select all</label>
+      <span><b>{{ total }}</b> job{{ '' if total == 1 else 's' }}</span>
+      <div class="actions"><button class="btn sm ghost" name="action" value="rank">Rank selected</button><button class="btn sm ghost" name="action" value="bookmark">★ Bookmark</button>
+        <button class="btn sm" name="action" value="select">Shortlist selected</button></div>
+    </form>
+    {% for j, sc, a in items %}{% with selectable = True %}{% include "_job_card.html" %}{% endwith %}
+    {% else %}<div class="card empty">No jobs yet. Run a search or paste a job above.</div>{% endfor %}
+    {% if pages > 1 %}<div class="actions">{% for n in range(1, pages + 1) %}<a class="btn sm {{ '' if n == pg else 'ghost' }}" href="?{% for k, v in f.items() if v %}{{ k }}={{ v|urlencode }}&{% endfor %}pg={{ n }}">{{ n }}</a>{% endfor %}</div>{% endif %}
+  </section>
 </div>
-<form class="card filters" method="get" action="/jobs"><div class="row">
-  <div style="flex:2"><label for="f-q">Keyword</label><input id="f-q" type="text" name="q" value="{{ f.q }}"></div>
-  <div><label for="f-filter-platform">Source</label><select id="f-filter-platform" name="platform"><option value="">all</option>{% for k, p in platforms.items() %}<option value="{{ k }}" {{ 'selected' if k == f.platform }}>{{ p.name }}</option>{% endfor %}<option value="imported" {{ 'selected' if f.platform == 'imported' }}>earlier version</option></select></div>
-  <div><label for="f-verdict">Fit check</label><select id="f-verdict" name="verdict"><option value="">all</option>{% for v in ['pass','flag','fail'] %}<option {{ 'selected' if v == f.verdict }}>{{ v }}</option>{% endfor %}</select></div>
-  <div><label for="f-min_score">Min score</label><input id="f-min_score" type="number" name="min_score" min="0" max="100" value="{{ f.min_score or '' }}"></div>
-  <div><label for="f-mode">Mode</label><select id="f-mode" name="mode"><option value="">any</option>{% for m in ['remote','hybrid','onsite'] %}<option {{ 'selected' if m == f.mode }}>{{ m }}</option>{% endfor %}</select></div>
-  <div><label for="f-jtype">Type</label><select id="f-jtype" name="jtype"><option value="">any</option>{% for t in ['internship','full-time','part-time','contract'] %}<option {{ 'selected' if t == f.jtype }}>{{ t }}</option>{% endfor %}</select></div>
-  <div><label for="f-sort">Sort</label><select id="f-sort" name="sort">{% for k, lbl in [('score','best match'),('newest','newest'),('company','company')] %}<option value="{{ k }}" {{ 'selected' if k == f.sort }}>{{ lbl }}</option>{% endfor %}</select></div>
-  <div style="flex:none"><label class="check"><input type="checkbox" name="bookmarked" value="1" {{ 'checked' if f.bookmarked }}> ★ only</label><button class="btn ghost">Filter</button></div></div></form>
-<form class="card" method="post" action="/jobs/bulk">{{ csrf_field(csrf) }}
-  <div class="row" style="align-items:center;margin-bottom:8px"><div><b>{{ total }}</b> job{{ '' if total == 1 else 's' }}</div>
-    <div class="actions" style="justify-content:flex-end;margin:0"><button class="btn sm ghost" name="action" value="rank">Rank selected</button>
-      <button class="btn sm ghost" name="action" value="bookmark">★ Bookmark</button><button class="btn sm" name="action" value="select">Add to application queue</button></div></div>
-  <table><tr><th><input type="checkbox" data-select-all="job"></th><th>Job</th><th>Score</th><th>Fit check</th><th>Source</th><th>Status</th></tr>
-  {% for j, sc, a in items %}<tr><td><input type="checkbox" name="job" value="{{ j.id }}"></td>
-    <td><a href="/jobs/{{ j.id }}"><b>{{ j.title }}</b></a>{% if j.bookmarked %} ★{% endif %}{% if not j.active %} <span class="badge b-hidden">closed</span>{% endif %}<br>
-      <span class="small muted">{{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}{% if j.work_mode %} · {{ j.work_mode }}{% endif %}{% if j.salary_text %} · {{ j.salary_text }}{% endif %}</span></td>
-    <td>{% if sc %}<span class="score">{{ sc.score }}</span><div class="small muted">{{ sc.recommendation }}</div>{% else %}<span class="muted small">not ranked</span>{% endif %}</td>
-    <td>{% set g = j.gates or {} %}{% if g.verdict %}<span class="badge b-{{ g.verdict }}">{{ g.verdict }}</span>{% for r in (g.reasons or [])[:2] %}<div class="small muted">{{ r }}</div>{% endfor %}{% endif %}{% if j.raw.get('duplicate_of') %}<div class="small muted">possible duplicate</div>{% endif %}</td>
-    <td class="small">{{ platforms[j.platform].name if j.platform in platforms else j.platform }}{% if j.ats %}<div class="muted">{{ j.ats }}</div>{% endif %}</td>
-    <td>{% if a %}<span class="badge b-{{ a.state|lower|replace(' ', '-') }}">{{ a.state }}</span>{% endif %}</td></tr>
-  {% else %}<tr><td colspan="6" class="empty">No jobs yet. Run a search or paste a job above.</td></tr>{% endfor %}</table>
-  {% if pages > 1 %}<div class="actions">{% for n in range(1, pages + 1) %}<a class="btn sm {{ '' if n == pg else 'ghost' }}" href="?{% for k, v in f.items() if v %}{{ k }}={{ v|urlencode }}&{% endfor %}pg={{ n }}">{{ n }}</a>{% endfor %}</div>{% endif %}
-</form>
 {% endblock %}

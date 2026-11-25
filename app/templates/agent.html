@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block title %}Agent{% endblock %}
 {% block body %}
-<h1>Agent</h1>
+<h1>AI agent</h1>
 <p class="sub">Tell the Groq agent what to look for. It can search, rank, write cover letters and shortlist jobs. It can never submit an application; that stays your click on the Queue page.</p>
 <form class="card" method="post" action="/agent">{{ csrf_field(csrf) }}
   <label for="f-prompt">What should it do?</label><textarea id="f-prompt" name="prompt" style="min-height:90px;font-family:inherit;font-size:15px" placeholder="Find ML and backend internships in Bangalore or remote, rank them, and shortlist the 5 best."></textarea>

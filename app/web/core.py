@@ -1,4 +1,6 @@
 """FastAPI app, templates, request guards (local-only, signed-in user, CSRF) and small helpers."""
+import hashlib
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -10,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
 
 from .. import auth, config, db
+from ..automation.states import LABELS as STATE_LABELS
 
 HERE = Path(__file__).resolve().parent.parent
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "testserver"}
@@ -37,6 +40,9 @@ def safe_url(url) -> str:
 
 
 templates.env.filters["safe_url"] = safe_url
+templates.env.filters["state_label"] = lambda state: STATE_LABELS.get(state, state)
+templates.env.filters["initials"] = lambda name: ("".join(w[0] for w in re.findall(r"[A-Za-z0-9]\w*", str(name or ""))[:2]) or "?").upper()
+templates.env.filters["hue"] = lambda name: int(hashlib.sha256(str(name or "").encode()).hexdigest()[:4], 16) % 360   # a steady colour per company
 
 
 class Ctx:
@@ -103,11 +109,35 @@ def page(request: Request, name: str, ctx: Ctx | None = None, **data):
     data.update(request=request, nav=name.rsplit(".", 1)[0], user=ctx.user if ctx else None,
                 csrf=ctx.sess.csrf if ctx else "", msg=request.query_params.get("msg"), kind=request.query_params.get("kind", "ok"))
     if ctx:
-        from ..ai import keys
-        from ..automation import worker
-        data.setdefault("has_key", keys.hint(ctx.s, ctx.uid) != "not set")
-        data.setdefault("waiting", worker.waiting_for(ctx.uid))
+        data["journey"] = journey(ctx.s, ctx.uid)
+        data.setdefault("has_key", data["journey"]["has_key"])
+        data.setdefault("waiting", data["journey"]["waiting"])
     return templates.TemplateResponse(request, name, data)
+
+
+def journey(s, uid: int) -> dict:
+    """Where this person is on the way from setup to tracked applications. Every page shows it."""
+    from sqlalchemy import func, select
+    from .. import profile as profiles, resumes
+    from ..ai import keys
+    from ..automation import states as S
+    pct, missing = profiles.completeness(profiles.current(s, uid)[0])
+    count = lambda *st: s.scalar(select(func.count(db.Application.id)).where(db.Application.user_id == uid, db.Application.state.in_(st))) or 0
+    has_key, has_resume = keys.hint(s, uid) != "not set", resumes.default(s, uid) is not None
+    found = s.scalar(select(func.count(db.Job.id)).where(db.Job.user_id == uid)) or 0
+    short, waiting, sent = count(S.SELECTED, S.QUEUED, S.FAILED), count(S.AWAITING, S.UNCONFIRMED), count(S.SUBMITTED)
+    ready = has_key and has_resume and pct >= 80
+    todo = "add your Groq key" if not has_key else "upload your resume" if not has_resume else f"profile {pct}% complete"
+    steps = [{"title": "Get ready", "detail": "all set" if ready else todo, "done": ready,
+              "href": "/settings" if not has_key else "/resumes" if not has_resume else "/profile"},
+             {"title": "Find jobs", "detail": f"{found} found", "done": found > 0, "href": "/jobs"},
+             {"title": "Shortlist", "detail": f"{short} shortlisted", "done": short > 0 or sent > 0, "href": "/queue" if short else "/jobs"},
+             {"title": "Apply", "detail": f"{waiting} need you" if waiting else "you press Apply", "done": sent > 0 and not waiting and not short,
+              "href": "/queue"},
+             {"title": "Track", "detail": f"{sent} sent", "done": sent > 0, "href": "/applications"}]
+    current = next((i for i, st in enumerate(steps) if not st["done"]), len(steps) - 1)
+    return {"steps": steps, "current": current, "pct": pct, "missing": missing, "has_key": has_key, "has_resume": has_resume,
+            "found": found, "shortlisted": short, "waiting": waiting, "sent": sent}
 
 
 def back(url: str, msg: str = "", kind: str = "ok") -> RedirectResponse:
@@ -122,3 +152,11 @@ def csrf_field(token: str) -> Markup:
 
 
 templates.env.globals["csrf_field"] = csrf_field
+
+
+def platform_name(key: str) -> str:
+    from ..platforms import PLATFORMS
+    return PLATFORMS[key].name if key in PLATFORMS else "Earlier version" if key == "imported" else key
+
+
+templates.env.globals["platform_name"] = platform_name
