@@ -36,20 +36,29 @@ def search_params(platform: str, params: dict) -> dict:
     return p
 
 
+def _web(s, user_id: int, browser, params: dict):
+    from .ai import keys, service
+    from .platforms import websearch
+    key = keys.get(s, user_id, "brave")
+    if not key: raise PermissionError("Add your Brave Search API key on Settings to search the web")
+    return websearch.search(browser, params, key, frozenset(service.settings(s, user_id).opt_in or []))
+
+
 def search(s, user_id: int, platform: str, params: dict, browser=None, execution_id=None) -> list[db.Job]:
     pol = PLATFORMS[platform]
     params = search_params(platform, params)
     if pol.discovery not in ("api", "test"): raise PermissionError(f"{pol.name} jobs are imported, not searched ({pol.terms_note})")
     ad, _ = adapters()
     with events.step(s, user_id, "search", f"Searching {pol.name} for '{params.get('query', '')}'", platform=platform, skill="freehire-search" if platform == "freehire" else "", execution_id=execution_id):
-        found = ad[platform].search_jobs(browser, params)
+        found, skipped = _web(s, user_id, browser, params) if platform == "web" else (ad[platform].search_jobs(browser, params), {})
     rows, fresh = [], 0
     for j in found:
         if gates.looks_senior(j["title"]) and params.get("skip_senior", True): continue
         row, new = upsert(s, user_id, j); rows.append(row); fresh += new
     s.add(db.SavedSearch(user_id=user_id, name=params.get("query", ""), platform=platform, params=params, saved=False,
                          last_run_at=db.now(), result_count=len(rows)))
-    events.emit(s, user_id, f"{len(found)} jobs found, {len(rows)} kept ({fresh} new); {sum(r.gates.get('verdict') == 'pass' for r in rows)} pass your filters",
+    left_out = "; skipped " + ", ".join(f"{n} {why}" for why, n in skipped.items()) if skipped else ""
+    events.emit(s, user_id, f"{len(found)} jobs found, {len(rows)} kept ({fresh} new); {sum(r.gates.get('verdict') == 'pass' for r in rows)} pass your filters{left_out}",
                 operation="search", platform=platform, level="success", status="completed", execution_id=execution_id)
     return rows
 

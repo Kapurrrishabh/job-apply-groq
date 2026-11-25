@@ -63,7 +63,7 @@ def settings_page(request: Request, ctx: Ctx = CTX):
     st = service.settings(ctx.s, ctx.uid)
     usage = ctx.s.execute(select(func.count(db.LlmUsage.id), func.coalesce(func.sum(db.LlmUsage.prompt_tokens + db.LlmUsage.completion_tokens), 0))
                           .where(db.LlmUsage.user_id == ctx.uid)).one()
-    return page(request, "settings.html", ctx, key_hint=keys.hint(ctx.s, ctx.uid), st=st, models=MODELS,
+    return page(request, "settings.html", ctx, key_hint=keys.hint(ctx.s, ctx.uid), brave_hint=keys.hint(ctx.s, ctx.uid, "brave"), st=st, models=MODELS,
                 weights={**DEFAULT_WEIGHTS, **(st.weights or {})}, usage=usage, platforms=PLATFORMS,
                 logins=site_sessions.status(ctx.s, ctx.uid), legacy=legacy.available(), opted=st.opt_in or [])
 
@@ -87,6 +87,37 @@ async def save_settings(request: Request, ctx: Ctx = CTX):
     return back("/settings", "Settings saved")
 
 
+@app.post("/settings/brave")
+def save_brave(brave_key: str = Form(""), ctx: Ctx = CTX):
+    try: keys.store(ctx.s, ctx.uid, brave_key, "brave")
+    except ValueError as e: return back("/settings", f"Brave key: {e}", "err")
+    return back("/settings", "Brave Search key saved; choose 'Web search' as the source on Find jobs")
+
+
+@app.post("/settings/autopilot")
+def save_autopilot(on: str = Form(""), every_hours: int = Form(12), consent: str = Form(""), ctx: Ctx = CTX):
+    from ..automation.autopilot import EVERY_HOURS
+    if every_hours not in EVERY_HOURS: return back("/settings#autopilot", "Choose how often Auto-apply runs", "err")
+    if on and consent != "yes": return back("/settings#autopilot", "Tick the standing-permission box to turn on Auto-apply", "err")
+    st = service.settings(ctx.s, ctx.uid)
+    cfg = {**(st.autopilot or {}), "on": bool(on), "every_hours": every_hours}
+    if on: cfg["accepted_at"] = cfg.get("accepted_at") or db.now().isoformat()
+    st.autopilot = cfg
+    if ctx.s.get(db.UserSettings, ctx.uid) is None: ctx.s.add(st)
+    events.emit(ctx.s, ctx.uid, f"Auto-apply switched {'on, every ' + str(every_hours) + ' hours' if on else 'off'} by you", operation="settings", level="warn")
+    return back("/settings#autopilot", "Auto-apply is on; the first run starts within a minute" if on else "Auto-apply is off")
+
+
+@app.post("/settings/autopilot/run")
+def run_autopilot(ctx: Ctx = CTX):
+    from ..automation import worker
+    st = service.settings(ctx.s, ctx.uid)
+    if not (st.autopilot or {}).get("on"): return back("/settings#autopilot", "Turn on Auto-apply first", "err")
+    st.autopilot = {**st.autopilot, "last_run": db.now().isoformat()}
+    worker.enqueue(ctx.s, ctx.uid, "autopilot", {})
+    return back("/console", "Auto-apply is running now; follow it here")
+
+
 @app.post("/settings/test")
 def test_groq(ctx: Ctx = CTX):
     try:
@@ -98,8 +129,9 @@ def test_groq(ctx: Ctx = CTX):
 
 
 @app.post("/settings/key/delete")
-def delete_key(ctx: Ctx = CTX):
-    keys.delete(ctx.s, ctx.uid); return back("/settings", "Groq key removed")
+def delete_key(provider: str = Form("groq"), ctx: Ctx = CTX):
+    if provider not in ("groq", "brave"): return back("/settings", "Unknown key", "err")
+    keys.delete(ctx.s, ctx.uid, provider); return back("/settings", f"{provider.title()} key removed")
 
 
 @app.post("/settings/import-legacy")

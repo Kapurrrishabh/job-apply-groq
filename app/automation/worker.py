@@ -81,8 +81,17 @@ def _drain(deadline: float = float("inf")) -> None:
 
 
 def _loop():
+    next_check = 0.0
     while True:
-        _wake.wait(timeout=2); _wake.clear(); _drain()
+        _wake.wait(timeout=2); _wake.clear()
+        if time.monotonic() >= next_check:   # Auto-apply schedules, once a minute
+            from .autopilot import schedule
+            s = db.session()
+            try: schedule(s)
+            except Exception: traceback.print_exc()   # a scheduling fault must not stop queued work from running
+            finally: s.close()
+            next_check = time.monotonic() + 60
+        _drain()
 
 
 def start() -> None:

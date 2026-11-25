@@ -290,3 +290,30 @@ def test_pasted_portal_link_becomes_an_automated_job():
     j = Manual().normalize_job({"url": "https://jobs.lever.co/leverdemo/abc-123", "title": "Engineer", "description": "Python"})
     assert (j["platform"], j["ats"], j["source_id"]) == ("employer", "lever", "leverdemo/abc-123")
     assert apply_adapter(NS(**j)) is not None
+
+
+# ---------- web search and Auto-apply ----------
+
+def test_web_search_asks_one_query_per_site():
+    from app.platforms.websearch import freshness, queries
+    assert queries("ML intern", "Bengaluru", ["jobs.lever.co", "greenhouse.io"]) == ['"ML intern" Bengaluru site:jobs.lever.co', '"ML intern" Bengaluru site:greenhouse.io']
+    assert queries("ML intern", "India", ["jobs.lever.co"]) == ['"ML intern" site:jobs.lever.co']
+    assert [freshness(d) for d in (1, 7, 14, 90)] == ["pd", "pw", "pm", "py"]
+
+
+@pytest.mark.parametrize("url,kind", [("https://job-boards.greenhouse.io/acme/jobs/1", "employer"), ("https://internshala.com/internship/detail/ml-at-x123", "internshala"),
+                                      ("https://in.linkedin.com/jobs/view/4012345678", "linkedin"), ("https://www.naukri.com/job-listings-1", None),
+                                      ("https://blog.example/internship/detail/x", None)])
+def test_web_results_are_kept_only_for_sites_it_can_apply_to(url, kind):
+    from app.platforms.websearch import kind_of
+    assert kind_of(url) == kind
+
+
+def test_auto_apply_runs_on_its_schedule():
+    from datetime import datetime, timedelta, timezone
+    from app.automation.autopilot import is_due
+    now = datetime(2026, 11, 25, 12, tzinfo=timezone.utc)
+    assert not is_due({}, now) and not is_due({"on": False}, now)
+    assert is_due({"on": True}, now)
+    assert not is_due({"on": True, "every_hours": 12, "last_run": (now - timedelta(hours=11)).isoformat()}, now)
+    assert is_due({"on": True, "every_hours": 12, "last_run": (now - timedelta(hours=12)).isoformat()}, now)

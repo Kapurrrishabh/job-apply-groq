@@ -39,6 +39,26 @@
         {% if logins.get(key) %}<form method="post" action="/sites/{{ key }}/forget" class="inline">{{ csrf_field(csrf) }}<button class="btn sm bad">Forget</button></form>{% endif %}</td></tr>
   {% endfor %}</table>
   <p class="small"><a href="https://github.com/Kapurrrishabh/job-apply-groq/blob/main/docs/PLATFORM_POLICIES.md" target="_blank" rel="noopener">Why some sites are assisted →</a></p></div>
+{% set ap = st.autopilot or {} %}
+<form class="card" id="autopilot" method="post" action="/settings/autopilot">{{ csrf_field(csrf) }}
+  <h2>Auto-apply {% if ap.on %}<span class="badge b-pass">on</span>{% else %}<span class="badge b-new">off</span>{% endif %}</h2>
+  <p class="small muted">With your standing permission, the app searches for the roles on your profile, ranks what it finds and applies on its own,
+    every few hours, with no Apply click. It stops for you only for CAPTCHAs, sensitive questions you haven't saved an answer for,
+    and questions your profile can't answer.{% if ap.last_run %} Last run {{ ap.last_run[:16].replace('T', ' ') }} UTC.{% endif %}</p>
+  <label class="check"><input type="checkbox" name="on" value="1" {{ 'checked' if ap.on }}> Turn on Auto-apply</label>
+  <div class="row"><div><label for="f-every_hours">Run every</label><select id="f-every_hours" name="every_hours">{% for h in [6, 12, 24] %}<option value="{{ h }}" {{ 'selected' if h == ap.get('every_hours', 12) }}>{{ h }} hours</option>{% endfor %}</select></div></div>
+  <label class="check confirm"><input type="checkbox" name="consent" value="yes" {{ 'checked' if ap.accepted_at }}> I give the app standing permission to submit
+    applications for me without asking each time: only jobs scoring {{ st.min_score }}+ (minimum match score), at most {{ st.daily_limit }} a day
+    (applications per day), and only on sites where it can apply.</label>
+  <div class="actions"><button class="btn">Save Auto-apply</button>{% if ap.on %}<button class="btn ghost" formaction="/settings/autopilot/run">Run now</button>{% endif %}</div>
+</form>
+<form class="card" method="post" action="/settings/brave">{{ csrf_field(csrf) }}<h2>Web search</h2>
+  <p class="small muted">Finds job pages on company job sites, Internshala, and LinkedIn (if you switched it on) through the official
+    <a href="https://brave.com/search/api/" target="_blank" rel="noopener">Brave Search API</a>. Google's own search API is closed to new users.
+    A free Brave key covers roughly 1,000 searches a month.</p>
+  <label for="f-brave_key">Brave Search API key <span class="hint">Currently: {{ brave_hint }}</span></label><input id="f-brave_key" type="password" name="brave_key" autocomplete="off">
+  <div class="actions"><button class="btn">Save key</button>{% if brave_hint != 'not set' %}<button class="btn bad" formaction="/settings/key/delete" name="provider" value="brave">Remove key</button>{% endif %}</div>
+</form>
 {% if legacy %}<form class="card" method="post" action="/settings/import-legacy">{{ csrf_field(csrf) }}<h2>Earlier data found</h2>
   <p class="small muted">Import the profile, answers, resumes, application history, Groq key and site logins from the previous version of this app into this account.</p>
   <button class="btn" data-confirm="Import the earlier data into this account?">Import earlier data</button></form>{% endif %}

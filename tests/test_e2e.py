@@ -455,3 +455,35 @@ def test_linkedin_jobs_it_cannot_easy_apply(ready, board_url, board, jid, why):
     linkedin_on(ready)
     job = import_linkedin(ready, board_url, jid); apply(ready, job.id)
     assert app_of(job.id).state == S.FAILED and why in app_of(job.id).error and board == []
+
+
+# ---------- Auto-apply: no clicks between the switch and the applications ----------
+
+def auto_apply_once(u):
+    from app.automation import autopilot
+    s = db.session(); autopilot.schedule(s); s.close(); worker.run_pending_now(240)
+
+
+def test_auto_apply_finds_ranks_and_applies_within_the_limit(ready, board, monkeypatch):
+    from app.automation import autopilot
+    monkeypatch.setattr(autopilot, "sources", lambda s, uid: ["testboard"])
+    s = db.session(); p, _ = profiles.current(s, 1); p.preferences.roles = ["intern"]; profiles.save(s, 1, p, "manual")
+    s.scalar(select(db.UserSettings)).daily_limit = 2; s.commit(); s.close()
+    ready.post("/settings/autopilot", data={"on": "1", "every_hours": "12", "consent": "yes"})
+    auto_apply_once(ready)
+    apps = list(db.session().scalars(select(db.Application)))
+    assert len(apps) == 2 and all(a.state in (S.SUBMITTED, S.AWAITING, S.UNCONFIRMED, S.BLOCKED) for a in apps)   # nobody pressed Apply
+    assert len(board) == sum(a.state in (S.SUBMITTED, S.UNCONFIRMED) for a in apps)
+    assert "under your standing permission" in events_text()
+    auto_apply_once(ready)                                   # not due again yet: nothing new
+    assert len(list(db.session().scalars(select(db.Application)))) == 2
+
+
+def test_auto_apply_leaves_low_scores_alone(ready, board, monkeypatch):
+    from app.automation import autopilot
+    monkeypatch.setattr(autopilot, "sources", lambda s, uid: ["testboard"])
+    s = db.session(); p, _ = profiles.current(s, 1); p.preferences.roles = ["intern"]; profiles.save(s, 1, p, "manual")
+    s.scalar(select(db.UserSettings)).min_score = 99; s.commit(); s.close()
+    ready.post("/settings/autopilot", data={"on": "1", "every_hours": "12", "consent": "yes"})
+    auto_apply_once(ready)
+    assert list(db.session().scalars(select(db.Application))) == [] and board == []

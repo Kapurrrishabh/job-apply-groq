@@ -15,6 +15,8 @@ class Policy:
 
 
 PLATFORMS: dict[str, Policy] = {
+    "web": Policy("Web search (Brave Search API)", "api", "automated", "https://brave.com/search/api/",
+                  "Finds job pages on employer job systems, Internshala, and LinkedIn when you switched it on; needs your Brave Search API key"),
     "freehire": Policy("freehire.me (employer job systems)", "api", "automated", "https://freehire.me",
                        "Public JSON API for agents; applications go to the employer's own job system", "freehire.me"),
     "wellfound": Policy("Wellfound", "page_import", "automated", "https://wellfound.com/terms",

@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from .. import db, events, jobs
 from ..agent import skills, tools
+from ..ai import service
 from ..automation import applications, states as S, worker
 from .core import CTX, Ctx, app, back, page
 
@@ -19,7 +20,8 @@ def dashboard(request: Request, ctx: Ctx = CTX):
     apps = lambda states, n: list(ctx.s.execute(select(db.Application, db.Job).join(db.Job, db.Job.id == db.Application.job_id).where(
         db.Application.user_id == ctx.uid, db.Application.state.in_(states)).order_by(db.Application.updated_at.desc()).limit(n)).all())
     return page(request, "dashboard.html", ctx, top=[(j, sc, applications.for_job(ctx.s, ctx.uid, j.id)) for _, j, sc in top[:5]],
-                attention=apps([S.AWAITING, S.UNCONFIRMED], 5), sent=apps([S.SUBMITTED], 5), recent=events.since(ctx.s, ctx.uid, 0, 8)[::-1])
+                attention=apps([S.AWAITING, S.UNCONFIRMED], 5), sent=apps([S.SUBMITTED], 5), recent=events.since(ctx.s, ctx.uid, 0, 8)[::-1],
+                auto=service.settings(ctx.s, ctx.uid).autopilot or {})
 
 
 @app.get("/console", response_class=HTMLResponse)

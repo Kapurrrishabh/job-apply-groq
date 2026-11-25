@@ -179,11 +179,12 @@ def test_agent_shortlists_but_never_submits(web, groq):
 def test_database_is_backed_up_before_a_migration(monkeypatch, instance):
     from sqlalchemy import text
     db.init()
+    latest = max(v for v, _ in db.MIGRATIONS)
     monkeypatch.setattr(db, "MIGRATIONS", db.MIGRATIONS + [(99, lambda conn: conn.execute(text("CREATE TABLE extra (id INTEGER)")))])
     db.init()
     with db.engine.begin() as conn:
         assert conn.execute(text("PRAGMA user_version")).scalar() == 99
-    assert list((instance / "backups").glob("jobapply-v2-*.db"))
+    assert list((instance / "backups").glob(f"jobapply-v{latest}-*.db"))
 
 
 def test_a_database_from_the_first_release_gains_new_settings(instance):
@@ -314,3 +315,52 @@ def test_closed_portal_job_gives_a_clear_message(web, monkeypatch):
 def test_other_links_still_need_a_title_and_description(web):
     r = web().post("/jobs/import", data={"url": "https://www.naukri.com/job-listings-123456"})
     assert "kind=err" in str(r.url)
+
+
+def test_auto_apply_needs_standing_permission(web):
+    u = web()
+    r = u.post("/settings/autopilot", data={"on": "1", "every_hours": "12"})
+    assert "kind=err" in str(r.url) and not db.session().scalar(select(db.UserSettings.autopilot)).get("on")
+    u.post("/settings/autopilot", data={"on": "1", "every_hours": "12", "consent": "yes"})
+    cfg = db.session().scalar(select(db.UserSettings.autopilot))
+    assert cfg["on"] and cfg["every_hours"] == 12 and cfg["accepted_at"]
+    assert "Auto-apply <span class=\"badge b-pass\">on" in u.get("/settings").text
+
+
+def test_auto_apply_is_scheduled_once_when_due(web):
+    from app.automation import autopilot
+    u = web(); u.post("/settings/autopilot", data={"on": "1", "every_hours": "6", "consent": "yes"})
+    s = db.session()
+    assert autopilot.schedule(s) == [1] and autopilot.schedule(s) == []      # the queued run counts as busy
+    s.close()
+
+
+def test_web_search_reads_portal_jobs_and_skips_the_rest(web, monkeypatch):
+    import httpx
+    from app.automation import worker
+    asked = []
+    def get(url, params=None, headers=None, **kw):
+        req = httpx.Request("GET", url)
+        if params: asked.append(params["q"])
+        if url.startswith("https://api.search.brave.com"):
+            assert headers["X-Subscription-Token"] == "B" * 30
+            hits = {"greenhouse.io": ["https://job-boards.greenhouse.io/enterpret/jobs/7723230003"],
+                    "jobs.lever.co": ["https://jobs.lever.co/acme/gone-1"], "linkedin.com/jobs/view": ["https://www.linkedin.com/jobs/view/401"]}
+            site = params["q"].rsplit("site:", 1)[1]
+            return httpx.Response(200, json={"web": {"results": [{"url": x} for x in hits.get(site, ["https://news.example/jobs"])]}}, request=req)
+        if "greenhouse" in url: return httpx.Response(200, json=GREENHOUSE_JOB, request=req)
+        return httpx.Response(404, json={}, request=req)
+    monkeypatch.setattr("app.platforms.websearch.httpx.get", get)
+    u = web(); u.post("/settings/brave", data={"brave_key": "B" * 30})
+    u.post("/jobs/search", data={"platform": "web", "query": "ML intern", "location": "Bengaluru", "days": "14"}); worker.run_pending_now(30)
+    rows = list(db.session().scalars(select(db.Job)))
+    assert [(j.platform, j.ats, j.title) for j in rows] == [("employer", "greenhouse", "Machine Learning Intern")]
+    log = " ".join(e.message for e in db.session().scalars(select(db.ExecutionEvent)))
+    assert "1 closed or unreadable" in log and "1 other sites" in log
+    assert not any("linkedin" in q for q in asked)          # LinkedIn is only searched once you switch its automation on
+
+
+def test_web_search_without_a_key_says_what_to_do(web):
+    from app.automation import worker
+    u = web(); u.post("/jobs/search", data={"platform": "web", "query": "ML intern"}); worker.run_pending_now(30)
+    assert "Add your Brave Search API key" in db.session().scalar(select(db.Execution.summary))

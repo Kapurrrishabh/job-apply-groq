@@ -19,3 +19,12 @@ Rules the app enforces on every platform:
 
 To change a platform's mode, edit `app/platforms.py` after re-checking its terms; the UI never offers an automated
 mode the table above does not allow.
+
+## Web search and Auto-apply (added 2026-11-25)
+
+- **Web search** uses the official Brave Search API with your own key, one query per site. Google's Custom Search JSON API
+  is closed to new customers and ends on 1 January 2027; scraping Google search is against Google's terms, so it isn't done.
+  Only results on sites the app can apply to are kept: employer job systems (read from their public job-board APIs),
+  Internshala, and LinkedIn when you switched LinkedIn automation on. At most 10 pages are opened per search, 4 s apart.
+- **Auto-apply** acts on your standing permission (Settings), recorded with the time you gave it. It applies only to jobs at or
+  above your minimum score, within your daily limit, on sites where the app may submit; the LLM still never decides to submit.

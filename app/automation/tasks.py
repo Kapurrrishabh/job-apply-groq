@@ -29,7 +29,8 @@ def apply_batch(s, ex, cancelled):
 
 def search(s, ex, cancelled):
     p = dict(ex.params); platform = p.pop("platform")
-    return f"{len(jobs.search(s, ex.user_id, platform, p, execution_id=ex.id))} jobs"
+    browser = browser_for(ex.user_id) if platform == "web" else None   # web results on Internshala or LinkedIn are read in the app's browser
+    return f"{len(jobs.search(s, ex.user_id, platform, p, browser=browser, execution_id=ex.id))} jobs"
 
 
 def rank(s, ex, cancelled):
@@ -96,5 +97,10 @@ def open_url(s, ex, cancelled):
     return "opened"
 
 
-HANDLERS = {"apply_batch": apply_batch, "search": search, "rank": rank, "letter": letter, "tailor": tailor, "agent": agent, "login": login,
+def autopilot(s, ex, cancelled):
+    from .autopilot import run
+    return run(s, ex, cancelled)
+
+
+HANDLERS = {"apply_batch": apply_batch, "autopilot": autopilot, "search": search, "rank": rank, "letter": letter, "tailor": tailor, "agent": agent, "login": login,
             "check_login": check_login, "import_page": import_page, "open_url": open_url}

@@ -90,6 +90,7 @@ class UserSettings(Base):
     daily_limit: Mapped[int] = mapped_column(Integer, default=15)
     letter_style: Mapped[str] = mapped_column(String(40), default="professional")
     opt_in: Mapped[list] = mapped_column(JSON, default=list)   # platforms you let the app automate despite their terms, e.g. ["linkedin"]
+    autopilot: Mapped[dict] = mapped_column(JSON, default=dict)   # {on, every_hours, accepted_at, last_run}: Auto-apply's standing permission
 
 
 class ApiKey(Base):
@@ -281,6 +282,7 @@ class PlatformSession(Base):
 
 MIGRATIONS: list = [   # (version, callable(conn)) for databases made by an older version; append, never edit
     (2, lambda conn: conn.execute(text("ALTER TABLE user_settings ADD COLUMN opt_in JSON DEFAULT '[]'"))),
+    (3, lambda conn: conn.execute(text("ALTER TABLE user_settings ADD COLUMN autopilot JSON DEFAULT '{}'"))),
 ]
 
 

@@ -26,6 +26,9 @@
     {% else %}<div class="card empty">Rank some jobs to see your best matches here.<div class="actions" style="justify-content:center"><a class="btn" href="/jobs">Find jobs</a></div></div>{% endfor %}
   </section>
   <aside>
+    <div class="card"><div class="card-head"><h2>Auto-apply {% if auto.on %}<span class="badge b-pass">on</span>{% else %}<span class="badge b-new">off</span>{% endif %}</h2><a href="/settings#autopilot">Settings →</a></div>
+      <p class="small muted">{% if auto.on %}Searching, ranking and applying every {{ auto.every_hours }} hours under your standing permission.{% if auto.last_run %} Last run {{ auto.last_run[:16].replace('T', ' ') }} UTC.{% endif %}
+        {% else %}Turn it on to let the app find and apply to good matches by itself, within your daily limit.{% endif %}</p></div>
     <div class="card"><div class="card-head"><h2>Needs you</h2><a href="/queue">Shortlist →</a></div>
       {% for a, j in attention %}<div class="list-item"><span class="logo-tile" style="--h: {{ j.company|hue }}">{{ j.company|initials }}</span>
         <div class="grow"><a href="/queue"><b>{{ j.title }}</b></a><div class="small muted">{{ a.blocker[:110] }}</div></div></div>
