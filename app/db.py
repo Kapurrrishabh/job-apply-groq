@@ -89,6 +89,7 @@ class UserSettings(Base):
     min_score: Mapped[int] = mapped_column(Integer, default=60)
     daily_limit: Mapped[int] = mapped_column(Integer, default=15)
     letter_style: Mapped[str] = mapped_column(String(40), default="professional")
+    opt_in: Mapped[list] = mapped_column(JSON, default=list)   # platforms you let the app automate despite their terms, e.g. ["linkedin"]
 
 
 class ApiKey(Base):
@@ -278,7 +279,9 @@ class PlatformSession(Base):
 
 # ---------- engine and migrations ----------
 
-MIGRATIONS: list = []   # (version, callable(conn)) after the initial create_all; append, never edit
+MIGRATIONS: list = [   # (version, callable(conn)) for databases made by an older version; append, never edit
+    (2, lambda conn: conn.execute(text("ALTER TABLE user_settings ADD COLUMN opt_in JSON DEFAULT '[]'"))),
+]
 
 
 def _engine(url: str):
@@ -311,7 +314,7 @@ def init(db_path: Path | None = None) -> None:
         shutil.copy2(db_path, backups / f"{db_path.stem}-v{version}-{int(time.time())}.db")
     Base.metadata.create_all(engine)
     with engine.begin() as conn:
-        for v, fn in pending:
+        for v, fn in pending if existed else []:   # a new database is created at the latest shape already
             fn(conn); conn.execute(text(f"PRAGMA user_version={v}"))
         if not existed: conn.execute(text(f"PRAGMA user_version={max([v for v, _ in MIGRATIONS], default=1)}"))
 

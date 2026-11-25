@@ -74,9 +74,12 @@ def decide(question: str, options: list[str] | None, ctx: FormContext) -> tuple[
     return None, "unknown"
 
 
-def fill(b, ctx: FormContext) -> FillResult:
+PLACEHOLDER = re.compile(r"(?i)^(select|choose|--|please)")
+
+
+def fill(b, ctx: FormContext, within: str | None = None) -> FillResult:
     res = FillResult()
-    fields = b.fields()
+    fields = b.fields(within)
     groups: dict[str, list[dict]] = {}
     for f in fields:
         if f["type"] in ("radio",) and f["name"]: groups.setdefault(f["name"], []).append(f)
@@ -98,7 +101,9 @@ def fill(b, ctx: FormContext) -> FillResult:
             elif f["required"]: res.missing.append({"question": q, "options": ["Yes", "No"], "sensitive": answer_rules.is_sensitive(q)})
             continue
         if f["tag"] == "select":
-            opts = [o for o in (f["options"] or []) if o and not re.match(r"(?i)^(select|choose|--|please)", o)]
+            if f["value"] and f.get("selected") and not PLACEHOLDER.match(f["selected"]) and not answer_rules.is_sensitive(q):
+                record(q, f["selected"], "prefilled", "select"); continue
+            opts = [o for o in (f["options"] or []) if o and not PLACEHOLDER.match(o)]
             a, src = decide(q, opts, ctx)
             if a: b.select(f["sel"], a); record(q, a, src, "select")
             elif f["required"]: res.missing.append({"question": q, "options": opts, "sensitive": answer_rules.is_sensitive(q)})

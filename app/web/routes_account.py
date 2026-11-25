@@ -65,7 +65,7 @@ def settings_page(request: Request, ctx: Ctx = CTX):
                           .where(db.LlmUsage.user_id == ctx.uid)).one()
     return page(request, "settings.html", ctx, key_hint=keys.hint(ctx.s, ctx.uid), st=st, models=MODELS,
                 weights={**DEFAULT_WEIGHTS, **(st.weights or {})}, usage=usage, platforms=PLATFORMS,
-                logins=site_sessions.status(ctx.s, ctx.uid), legacy=legacy.available())
+                logins=site_sessions.status(ctx.s, ctx.uid), legacy=legacy.available(), opted=st.opt_in or [])
 
 
 @app.post("/settings")
@@ -138,11 +138,20 @@ def diagnostics(request: Request, ctx: Ctx = CTX):
 
 
 @app.post("/sites/{platform}/{action}")
-def site_login(platform: str, action: str, ctx: Ctx = CTX):
+def site_login(platform: str, action: str, accept: str = Form(""), ctx: Ctx = CTX):
     from ..automation import worker
     from ..platforms import PLATFORMS
     pol = PLATFORMS.get(platform)
-    if not pol or not pol.login_url or action not in ("login", "check_login", "forget"): return back("/settings#sites", "Unknown site or action", "err")
+    if not pol or not pol.login_url or action not in ("login", "check_login", "forget", "automate_on", "automate_off"):
+        return back("/settings#sites", "Unknown site or action", "err")
+    if action in ("automate_on", "automate_off"):
+        if not pol.opt_in: return back("/settings#sites", f"{pol.name} can't be switched", "err")
+        st = service.settings(ctx.s, ctx.uid); chosen = set(st.opt_in or [])
+        if action == "automate_on" and accept != "yes": return back("/settings#sites", "Tick the box to accept the risk first", "err")
+        st.opt_in = sorted(chosen | {platform} if action == "automate_on" else chosen - {platform})
+        if ctx.s.get(db.UserSettings, ctx.uid) is None: ctx.s.add(st)
+        events.emit(ctx.s, ctx.uid, f"{pol.name} automation switched {'on' if action == 'automate_on' else 'off'} by you", operation="settings", level="warn")
+        return back("/settings#sites", f"{pol.name}: the app will {'now apply for you' if action == 'automate_on' else 'only prepare; you submit'}")
     if action == "forget":
         site_sessions.forget(ctx.s, ctx.uid, platform); return back("/settings#sites", f"{pol.name} login forgotten")
     worker.enqueue(ctx.s, ctx.uid, action, {"platform": platform})

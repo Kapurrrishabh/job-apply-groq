@@ -1,5 +1,6 @@
 """End to end with a real headless Chrome against the local mock board (tests/mock_board.py) and a fake Groq.
 No real job site, account or API key is touched."""
+import re
 import pytest
 from sqlalchemy import select
 
@@ -357,3 +358,100 @@ def test_internshala_already_applied_sends_nothing(ready, board, board_url):
 def test_internshala_import_refuses_other_pages(ready, board_url):
     assert import_internshala(ready, board_url, "1", path="/jobs/") is None
     assert "Open an Internshala internship or job page" in events_text()
+
+
+# ---------- a pasted Greenhouse link, with Greenhouse served locally inside the browser ----------
+
+GH_FORM = """<html><body><h1>Machine Learning Intern</h1><form method="post" action="https://job-boards.greenhouse.io/embed/job_app/submit" enctype="multipart/form-data">
+<label for="first_name">First Name *</label><input id="first_name" name="first_name" required>
+<label for="last_name">Last Name *</label><input id="last_name" name="last_name" required>
+<label for="email">Email *</label><input id="email" name="email" type="email" required>
+<label for="phone">Phone</label><input id="phone" name="phone">
+<label for="resume">Resume/CV *</label><input id="resume" name="resume" type="file" required>
+<label for="linkedin">LinkedIn Profile</label><input id="linkedin" name="linkedin">
+<label for="why">Why do you want to work at Enterpret?</label><textarea id="why" name="why"></textarea>
+<button type="submit">Submit application</button></form>
+<p>This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.</p></body></html>"""
+
+
+def test_pasted_greenhouse_link_is_applied_to(ready, monkeypatch):
+    import httpx
+    from test_web import GREENHOUSE_JOB
+    monkeypatch.setattr("app.platforms.ats.httpx.get", lambda url, **kw: httpx.Response(200, json=GREENHOUSE_JOB, request=httpx.Request("GET", url)))
+    sent = []
+    def greenhouse(route):
+        if route.request.method == "POST":
+            sent.append(route.request.post_data_buffer)
+            return route.fulfill(status=200, content_type="text/html", body="<h1>Thank you for applying.</h1><p>Your application has been received.</p>")
+        route.fulfill(status=200, content_type="text/html", body=GH_FORM)
+    b = worker.browser_for(1); b.start(); b.ctx.route("https://job-boards.greenhouse.io/**", greenhouse)
+    r = ready.post("/jobs/import", data={"url": "https://job-boards.greenhouse.io/enterpret/jobs/7723230003"})
+    job = db.session().scalar(select(db.Job).where(db.Job.platform == "employer"))
+    assert (job.title, job.company, job.ats) == ("Machine Learning Intern", "Enterpret", "greenhouse") and "Shortlist to apply" in r.text
+    apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.SUBMITTED and "thank you for applying" in a.evidence["detail"].lower()
+    # Chrome doesn't pass uploaded file contents to intercepted requests, so the file is checked by its form part and name.
+    assert len(sent) == 1 and b"Asha" in sent[0] and b"asha@example.com" in sent[0] and b"40%" in sent[0]
+    assert re.search(rb'name="resume"; filename="[0-9a-f]{16}\.pdf"', sent[0])
+
+
+# ---------- LinkedIn Easy Apply (opt-in), against a LinkedIn-like page on the mock board ----------
+
+def linkedin_on(u, signed_in=True):
+    from app import site_sessions
+    u.post("/sites/linkedin/automate_on", data={"accept": "yes"})
+    if signed_in:
+        s = db.session()
+        site_sessions.save(s, 1, "linkedin", [{"name": "li_at", "value": "test", "domain": ".linkedin.com", "path": "/", "expires": -1}], domain="linkedin.com")
+        s.commit(); s.close()
+
+
+def import_linkedin(u, board_url, jid):
+    s = db.session(); worker.enqueue(s, 1, "open_url", {"url": f"{board_url}/jobs/view/{jid}/"}); s.commit(); s.close()
+    u.post("/jobs/import-page", data={"platform": "linkedin"}); worker.run_pending_now(60)
+    return db.session().scalar(select(db.Job).where(db.Job.platform == "linkedin", db.Job.source_id == jid))
+
+
+def test_linkedin_stays_assisted_until_you_switch_it_on(ready, board_url, board):
+    r = ready.post("/jobs/import-page", data={"platform": "linkedin"})
+    assert "kind=err" in str(r.url)
+    r = ready.post("/sites/linkedin/automate_on", data={})
+    assert "kind=err" in str(r.url) and db.session().scalar(select(db.UserSettings.opt_in)) == []
+
+
+def test_linkedin_easy_apply_end_to_end(ready, board_url, board):
+    linkedin_on(ready)
+    job = import_linkedin(ready, board_url, "4011111111")
+    assert (job.title, job.company, job.location) == ("AI Engineer Intern", "Mock Labs", "Bengaluru, Karnataka, India")
+    ready.post("/answers", data={"count": "1", "pattern_0": "years of work experience", "answer_0": "2",
+                                 "pattern_1": "legally authorized", "answer_1": "Yes"})
+    apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.SUBMITTED and "your application was sent" in a.evidence["detail"].lower()
+    sent = board[-1]
+    assert (sent["phone"], sent["py"], sent["authorized"], sent["cc"]) == ("+91 90000 00000", "2", "Yes", "in") and sent["resume_name"].endswith(".pdf")
+
+
+def test_linkedin_questions_wait_then_submit(ready, board_url, board):
+    linkedin_on(ready)
+    job = import_linkedin(ready, board_url, "4011111111"); apply(ready, job.id)
+    a = app_of(job.id)
+    assert a.state == S.AWAITING and board == []
+    pending = {q["question"]: q for q in a.pending}
+    assert pending["Are you legally authorized to work in India?"]["sensitive"]
+    ready.post(f"/applications/{a.id}/answer", data={"a_0": "2", "a_1": "Yes"}); worker.run_pending_now(120)
+    assert app_of(job.id).state == S.SUBMITTED and board[-1]["authorized"] == "Yes"
+
+
+def test_linkedin_needs_your_sign_in(ready, board_url, board):
+    linkedin_on(ready, signed_in=False)
+    job = import_linkedin(ready, board_url, "4011111111"); apply(ready, job.id)
+    assert app_of(job.id).state == S.AWAITING and "Sign in to LinkedIn" in app_of(job.id).blocker and board == []
+
+
+@pytest.mark.parametrize("jid,why", [("4022222222", "company's own site"), ("4033333333", "already applied")])
+def test_linkedin_jobs_it_cannot_easy_apply(ready, board_url, board, jid, why):
+    linkedin_on(ready)
+    job = import_linkedin(ready, board_url, jid); apply(ready, job.id)
+    assert app_of(job.id).state == S.FAILED and why in app_of(job.id).error and board == []

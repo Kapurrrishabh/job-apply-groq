@@ -1,10 +1,55 @@
 """Employer job systems behind freehire postings. Greenhouse, Lever and Ashby forms are filled automatically;
 other systems are assisted (you submit on the employer's site)."""
+import html
 import re
 from urllib.parse import parse_qs, urlparse
-from .base import Adapter
+import httpx
+from .base import Adapter, clean
 
 AUTOMATED = {"greenhouse", "lever", "ashby"}
+# Public job-board APIs these systems publish for showing an employer's jobs; no key needed.
+POSTING_API = {"greenhouse": "https://boards-api.greenhouse.io/v1/boards/{org}/jobs/{id}", "lever": "https://api.lever.co/v0/postings/{org}/{id}",
+               "ashby": "https://api.ashbyhq.com/posting-api/job-board/{org}"}
+
+
+def parse_link(url: str) -> tuple[str, str, str] | None:
+    """(system, employer, job id) for a Greenhouse, Lever or Ashby job link; None for anything else."""
+    u = urlparse(url or ""); host = (u.hostname or "").lower(); parts = [p for p in u.path.split("/") if p]; q = parse_qs(u.query)
+    if host == "greenhouse.io" or host.endswith(".greenhouse.io"):
+        if "for" in q and "token" in q: return "greenhouse", q["for"][0], q["token"][0]
+        if len(parts) >= 3 and parts[1] == "jobs" and parts[2].isdigit(): return "greenhouse", parts[0], parts[2]
+    if host == "jobs.lever.co" and len(parts) >= 2: return "lever", parts[0], parts[1]
+    if host == "jobs.ashbyhq.com" and len(parts) >= 2: return "ashby", parts[0], parts[1]
+    return None
+
+
+def _text(markup: str) -> str:
+    t = re.sub(r"(?i)<(br|/p|/li|/h\d|/div)[^>]*>", "\n", html.unescape(markup or ""))
+    return "\n".join(clean(line) for line in html.unescape(re.sub(r"<[^>]+>", " ", t)).splitlines() if clean(line))
+
+
+def from_posting(kind: str, org: str, job_id: str, data: dict) -> dict:
+    """Title, company, location and description out of a public job-board API reply."""
+    name = org.replace("-", " ").replace("_", " ").title()
+    if kind == "greenhouse":
+        return {"title": data["title"], "company": data.get("company_name") or name, "location": (data.get("location") or {}).get("name", ""),
+                "description": _text(data.get("content", ""))}
+    if kind == "lever":
+        lists = "\n".join(f"{x.get('text', '')}\n{_text(x.get('content', ''))}" for x in data.get("lists") or [])
+        return {"title": data["text"], "company": name, "location": (data.get("categories") or {}).get("location", ""),
+                "description": "\n".join(x for x in [data.get("descriptionPlain", ""), lists, data.get("additionalPlain", "")] if x)}
+    job = next((j for j in data.get("jobs") or [] if j.get("id") == job_id), None)
+    if not job: raise ValueError("That job is no longer on the employer's job board")
+    return {"title": job["title"], "company": name, "location": job.get("location", ""), "description": job.get("descriptionPlain", "")}
+
+
+def posting(url: str) -> dict:
+    kind, org, job_id = parse_link(url) or (None, None, None)
+    if not kind: raise ValueError("Not a Greenhouse, Lever or Ashby job link")
+    r = httpx.get(POSTING_API[kind].format(org=org, id=job_id), timeout=15)
+    if r.status_code == 404: raise ValueError("That job is no longer on the employer's job board")
+    r.raise_for_status()
+    return from_posting(kind, org, job_id, r.json())
 
 
 def form_url(browser, url: str, kind: str) -> str:
@@ -23,6 +68,13 @@ def form_url(browser, url: str, kind: str) -> str:
 
 class EmployerSystem(Adapter):
     key = "ats"
+
+    def check_availability(self, browser, job) -> bool | None:
+        if not parse_link(job.url): return None
+        try:
+            posting(job.url); return True
+        except ValueError:
+            return False
 
     def fill_application(self, browser, job, form_ctx):
         from ..automation.forms import fill

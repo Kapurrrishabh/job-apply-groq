@@ -7,14 +7,14 @@ from sqlalchemy import select
 
 from .. import answers, config, db, events, letters, profile as profiles, resumes, site_sessions
 from ..ai.provider import LLMError
-from ..platforms import PLATFORMS, adapters, apply_adapter
+from ..platforms import PLATFORMS, adapters
 from . import states as S
-from .applications import snapshot, submitted_today
+from .applications import adapter_for, snapshot, submitted_today
 from .forms import FormContext
 
 WORKER_ID = uuid.uuid4().hex
-DELAY = {"wellfound": 45, "internshala": 60, "freehire": 30, "testboard": 0}   # seconds between applications; provisional, human-paced
-LOGIN_NEEDED = {"wellfound", "internshala"}
+DELAY = {"wellfound": 45, "internshala": 60, "linkedin": 90, "freehire": 30, "testboard": 0}   # seconds between applications; provisional, human-paced
+LOGIN_NEEDED = {"wellfound", "internshala", "linkedin"}
 
 
 def _lock(s, a: db.Application) -> bool:
@@ -75,7 +75,7 @@ def run_one(s, user_id: int, a: db.Application, browser, execution_id: int) -> s
         a.resume_id = r.id
         if submitted_today(s, user_id) >= (s.get(db.UserSettings, user_id) or db.UserSettings(daily_limit=15)).daily_limit:
             S.move(a, S.SELECTED, blocker="Daily application limit reached; it stays selected for tomorrow"); emit(a.blocker, level="warn", status="completed"); return a.state
-        adapter = apply_adapter(job)
+        adapter = adapter_for(s, user_id, job)
         try:
             checker = adapters()[0].get(job.platform)   # the platform knows whether the posting is open, not the form system
             available = checker.check_availability(browser, job) if checker else None
@@ -83,7 +83,7 @@ def run_one(s, user_id: int, a: db.Application, browser, execution_id: int) -> s
             available = None; emit(f"Could not check whether the posting is open ({e}); continuing", level="warn")
         if available is False:
             job.active = False; S.move(a, S.BLOCKED, blocker="The posting is closed"); emit("Posting closed", level="warn", status="completed"); return a.state
-        if job.platform in LOGIN_NEEDED and job.platform not in site_sessions.status(s, user_id):
+        if adapter and job.platform in LOGIN_NEEDED and job.platform not in site_sessions.status(s, user_id):   # only when the app submits
             S.move(a, S.AWAITING, blocker=f"Sign in to {PLATFORMS[job.platform].name} on the Settings page, then retry"); emit(a.blocker, level="wait", status="waiting"); return a.state
 
         # ---- prepare

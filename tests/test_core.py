@@ -254,3 +254,39 @@ def test_agent_has_no_submit_tool():
 def test_bad_tool_arguments_go_back_to_the_model():
     assert "invalid arguments" in tools.call(None, 1, "rank_jobs", {"job_ids": "nope"}, 0)["error"]
     assert "unknown tool" in tools.call(None, 1, "submit_application", {}, 0)["error"]
+
+
+# ---------- company job sites (pasted links) ----------
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://job-boards.greenhouse.io/enterpret/jobs/7723230003", ("greenhouse", "enterpret", "7723230003")),
+    ("https://boards.greenhouse.io/acme/jobs/123?gh_src=x", ("greenhouse", "acme", "123")),
+    ("https://job-boards.greenhouse.io/embed/job_app?for=acme&token=456", ("greenhouse", "acme", "456")),
+    ("https://jobs.lever.co/leverdemo/ad208490-4052/apply", ("lever", "leverdemo", "ad208490-4052")),
+    ("https://jobs.ashbyhq.com/Ashby/7458d4e9/application", ("ashby", "Ashby", "7458d4e9")),
+    ("https://www.linkedin.com/jobs/view/4012345678", None), ("https://evil.example/greenhouse.io/acme/jobs/1", None)])
+def test_portal_links_are_recognised(url, expected):
+    from app.platforms.ats import parse_link
+    assert parse_link(url) == expected
+
+
+def test_greenhouse_posting_text_is_readable():
+    from app.platforms.ats import from_posting
+    d = from_posting("greenhouse", "enterpret", "1", {"title": "ML Intern", "company_name": "Enterpret", "location": {"name": "Bengaluru"},
+                                                     "content": "&lt;h3&gt;About&lt;/h3&gt;&lt;p&gt;Python &amp;amp; RAG&lt;/p&gt;"})
+    assert d == {"title": "ML Intern", "company": "Enterpret", "location": "Bengaluru", "description": "About\nPython & RAG"}
+
+
+def test_ashby_job_missing_from_board_is_reported():
+    from app.platforms.ats import from_posting
+    with pytest.raises(ValueError, match="no longer"):
+        from_posting("ashby", "acme", "gone", {"jobs": [{"id": "other", "title": "x"}]})
+
+
+def test_pasted_portal_link_becomes_an_automated_job():
+    from types import SimpleNamespace as NS
+    from app.platforms import apply_adapter
+    from app.platforms.manual import Manual
+    j = Manual().normalize_job({"url": "https://jobs.lever.co/leverdemo/abc-123", "title": "Engineer", "description": "Python"})
+    assert (j["platform"], j["ats"], j["source_id"]) == ("employer", "lever", "leverdemo/abc-123")
+    assert apply_adapter(NS(**j)) is not None

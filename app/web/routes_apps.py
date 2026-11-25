@@ -6,7 +6,7 @@ from sqlalchemy import or_, select
 
 from .. import config, db, jobs, letters, resumes
 from ..automation import applications, states as S, worker
-from ..platforms import PLATFORMS, apply_adapter
+from ..platforms import PLATFORMS
 from .core import CTX, Ctx, app, back, page
 
 QUEUE_STATES = [S.SELECTED, S.QUEUED, S.PREFLIGHT, S.PREPARING, S.FILLING, S.AWAITING, S.READY, S.SUBMITTING, S.FAILED, S.UNCONFIRMED, S.BLOCKED]
@@ -22,7 +22,7 @@ def _rows(s, uid, states_, q=""):
 @app.get("/queue", response_class=HTMLResponse)
 def queue(request: Request, ctx: Ctx = CTX):
     rows = _rows(ctx.s, ctx.uid, QUEUE_STATES)
-    info = {a.id: (PLATFORMS.get(j.platform, PLATFORMS["other"]), apply_adapter(j) is not None, letters.current(ctx.s, ctx.uid, j.id)[1]) for a, j in rows}
+    info = {a.id: (PLATFORMS.get(j.platform, PLATFORMS["other"]), applications.adapter_for(ctx.s, ctx.uid, j) is not None, letters.current(ctx.s, ctx.uid, j.id)[1]) for a, j in rows}
     runs = list(ctx.s.scalars(select(db.Execution).where(db.Execution.user_id == ctx.uid, db.Execution.kind == "apply_batch",
                                                          db.Execution.status.in_(["queued", "running"]))))
     return page(request, "queue.html", ctx, rows=rows, info=info, resume=resumes.default(ctx.s, ctx.uid), runs=runs,

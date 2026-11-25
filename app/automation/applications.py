@@ -50,6 +50,13 @@ def authorize(s, user_id: int, app_ids: list[int]):
     return ex
 
 
+def adapter_for(s, user_id: int, job: db.Job):
+    """apply_adapter with this person's own automation choices."""
+    from ..ai import service
+    from ..platforms import apply_adapter
+    return apply_adapter(job, frozenset(service.settings(s, user_id).opt_in or []))
+
+
 def release(s, user_id: int, app_ids: list[int]) -> None:
     """Applications a stopped or failed run never reached go back to the shortlist instead of sitting in Queued."""
     for aid in app_ids:

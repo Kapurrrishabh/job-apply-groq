@@ -16,15 +16,17 @@
   <div class="grid g2" style="margin:12px 0 0">
     <details><summary>Paste a job from any site</summary>
       <form method="post" action="/jobs/import">{{ csrf_field(csrf) }}
-        <div class="row"><div><label for="f-import-url">Job link</label><input id="f-import-url" type="text" name="url" placeholder="https://…"></div><div><label for="f-title">Title</label><input id="f-title" type="text" name="title" required></div></div>
+        <div class="row"><div><label for="f-import-url">Job link</label><input id="f-import-url" type="text" name="url" placeholder="https://…"></div><div><label for="f-title">Title</label><input id="f-title" type="text" name="title"></div></div>
         <div class="row"><div><label for="f-company">Company</label><input id="f-company" type="text" name="company"></div><div><label for="f-import-location">Location</label><input id="f-import-location" type="text" name="location"></div><div><label for="f-salary">Salary</label><input id="f-salary" type="text" name="salary"></div></div>
-        <label for="f-description">Description</label><textarea id="f-description" name="description" required></textarea>
+        <label for="f-description">Description</label><textarea id="f-description" name="description"></textarea>
         <div class="actions"><button class="btn">Import</button></div></form>
-      <p class="hint">Best for LinkedIn, Naukri and other sites that don't allow automated searching.</p></details>
+      <p class="hint">A Greenhouse, Lever or Ashby link is enough: the rest is filled in and the app can apply for you. For LinkedIn or Naukri jobs that say
+        "Apply on company website", paste that company link. For other sites, add the title and description; you submit those yourself.</p></details>
     <details><summary>Import the job open in the app's browser</summary>
       <p class="hint">Sign in on Settings, browse Internshala or Wellfound in the app's browser window, open a job, then press Import. One page is read, on your click.</p>
       <form method="post" action="/jobs/import-page" class="actions">{{ csrf_field(csrf) }}
-        <button class="btn ghost" name="platform" value="internshala">Import the Internshala job</button><button class="btn ghost" name="platform" value="wellfound">Import the Wellfound job</button></form></details>
+        <button class="btn ghost" name="platform" value="internshala">Import the Internshala job</button><button class="btn ghost" name="platform" value="wellfound">Import the Wellfound job</button>
+        {% if 'linkedin' in opted %}<button class="btn ghost" name="platform" value="linkedin">Import the LinkedIn job</button>{% endif %}</form></details>
   </div>
 </section>
 

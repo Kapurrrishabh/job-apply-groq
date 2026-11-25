@@ -26,9 +26,14 @@
 <div class="card" id="sites"><h2>Job sites</h2>
   <p class="small muted">Sign in once in the app's browser window. Logins are encrypted and kept at least 48 hours. Passwords are never stored. CAPTCHAs and codes are always yours to complete.</p>
   <table>{% for key, p in platforms.items() if p.login_url %}
-    <tr><td><b>{{ p.name }}</b> <span class="badge b-{{ 'pass' if p.applying == 'automated' else 'flag' }}">{{ 'automated' if p.applying == 'automated' else 'assisted' }}</span><br>
+    {% set auto = p.applying == 'automated' or key in opted %}
+    <tr><td><b>{{ p.name }}</b> <span class="badge b-{{ 'pass' if auto else 'flag' }}">{{ 'automated' if auto else 'assisted' }}</span><br>
       <span class="small">{% if logins.get(key) %}<span class="badge b-pass">signed in</span> <span class="muted">until {{ logins[key].expires_at.strftime('%b %d %H:%M') }} UTC</span>{% else %}<span class="muted">not signed in</span>{% endif %}</span>
-      <div class="hint">{{ p.terms_note }}</div></td>
+      <div class="hint">{{ p.terms_note }}</div>
+      {% if p.opt_in %}{% if key in opted %}<form method="post" action="/sites/{{ key }}/automate_off" class="actions">{{ csrf_field(csrf) }}<span class="small"><b>Easy Apply automation is on.</b></span><button class="btn sm ghost">Turn off</button></form>
+      {% else %}<form method="post" action="/sites/{{ key }}/automate_on">{{ csrf_field(csrf) }}
+        <label class="check"><input type="checkbox" name="accept" value="yes" required> I understand: {{ p.opt_in }}. I accept that risk for my account.</label>
+        <button class="btn sm bad">Let the app apply on {{ p.name }} for me</button></form>{% endif %}{% endif %}</td>
       <td class="nowrap"><form method="post" action="/sites/{{ key }}/login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm">Sign in</button></form>
         <form method="post" action="/sites/{{ key }}/check_login" class="inline">{{ csrf_field(csrf) }}<button class="btn sm ghost">Check</button></form>
         {% if logins.get(key) %}<form method="post" action="/sites/{{ key }}/forget" class="inline">{{ csrf_field(csrf) }}<button class="btn sm bad">Forget</button></form>{% endif %}</td></tr>

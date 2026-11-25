@@ -179,11 +179,25 @@ def test_agent_shortlists_but_never_submits(web, groq):
 def test_database_is_backed_up_before_a_migration(monkeypatch, instance):
     from sqlalchemy import text
     db.init()
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, lambda conn: conn.execute(text("CREATE TABLE extra (id INTEGER)")))])
+    monkeypatch.setattr(db, "MIGRATIONS", db.MIGRATIONS + [(99, lambda conn: conn.execute(text("CREATE TABLE extra (id INTEGER)")))])
     db.init()
     with db.engine.begin() as conn:
-        assert conn.execute(text("PRAGMA user_version")).scalar() == 2
-    assert list((instance / "backups").glob("jobapply-v1-*.db"))
+        assert conn.execute(text("PRAGMA user_version")).scalar() == 99
+    assert list((instance / "backups").glob("jobapply-v2-*.db"))
+
+
+def test_a_database_from_the_first_release_gains_new_settings(instance):
+    import sqlite3
+    from sqlalchemy import text
+    old = instance / "old.db"
+    con = sqlite3.connect(old)
+    con.executescript("CREATE TABLE user_settings (user_id INTEGER PRIMARY KEY, model TEXT, temperature REAL, max_tokens INTEGER, weights JSON, "
+                      "min_score INTEGER, daily_limit INTEGER, letter_style TEXT); INSERT INTO user_settings VALUES (1, 'm', 0.2, 6000, '{}', 60, 15, 'professional');"
+                      "PRAGMA user_version=1;"); con.close()
+    db.init(old)
+    with db.engine.begin() as conn:
+        assert conn.execute(text("SELECT opt_in FROM user_settings WHERE user_id = 1")).scalar() == "[]"
+    assert list((instance / "backups").glob("old-v1-*.db"))
 
 
 def test_every_template_link_and_form_has_a_route():
@@ -269,3 +283,34 @@ def test_tailored_cv_is_one_page_and_waits_for_approval(web, groq, profile_data)
     assert "What changed from your profile" in page and "Approve for applications" in page
     u.post(f"/resumes/{r.id}/approve")
     assert "(tailored)" in u.get(f"/jobs/{jid}").text
+
+
+GREENHOUSE_JOB = {"title": "Machine Learning Intern", "company_name": "Enterpret", "location": {"name": "Bengaluru"},
+                  "content": "&lt;p&gt;Build RAG features in Python and PyTorch.&lt;/p&gt;"}
+
+
+def fake_greenhouse(monkeypatch, status=200):
+    import httpx
+    def get(url, **kw):
+        assert url == "https://boards-api.greenhouse.io/v1/boards/enterpret/jobs/7723230003"
+        return httpx.Response(status, json=GREENHOUSE_JOB if status == 200 else {}, request=httpx.Request("GET", url))
+    monkeypatch.setattr("app.platforms.ats.httpx.get", get)
+
+
+def test_a_portal_link_alone_imports_the_whole_job(web, monkeypatch):
+    fake_greenhouse(monkeypatch); u = web()
+    r = u.post("/jobs/import", data={"url": "https://job-boards.greenhouse.io/enterpret/jobs/7723230003"})
+    page = r.text
+    assert "Machine Learning Intern" in page and "Enterpret" in page and "Build RAG features" in page
+    assert "automated after you authorize" in page
+
+
+def test_closed_portal_job_gives_a_clear_message(web, monkeypatch):
+    fake_greenhouse(monkeypatch, status=404)
+    r = web().post("/jobs/import", data={"url": "https://job-boards.greenhouse.io/enterpret/jobs/7723230003"})
+    assert "kind=err" in str(r.url) and "no+longer" in str(r.url).replace("%20", "+")
+
+
+def test_other_links_still_need_a_title_and_description(web):
+    r = web().post("/jobs/import", data={"url": "https://www.naukri.com/job-listings-123456"})
+    assert "kind=err" in str(r.url)

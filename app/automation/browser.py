@@ -11,15 +11,18 @@ BARRIER = re.compile(r"(?i)(complete|solve) the captcha|captcha (is )?required|v
 CHALLENGE_FRAMES = ("iframe[src*='recaptcha'][src*='anchor']:not([src*='size=invisible']), iframe[src*='recaptcha'][src*='bframe'], "
                     "iframe[src*='hcaptcha'], iframe[src*='challenges.cloudflare']")
 
-FIELDS_JS = r"""() => {
+FIELDS_JS = r"""(within) => {
   const out = [];
+  document.querySelectorAll('[data-ajs]').forEach(e => e.removeAttribute('data-ajs'));   // a multi-step form changes between reads
+  const scope = within ? document.querySelector(within) : document;
+  if (!scope) return out;
   const text = el => (el ? (el.innerText || el.textContent || '').trim() : '');
   const before = el => {   // the question text just above a field that has no <label>
     for (let n = el, i = 0; n && i < 3; n = n.parentElement, i++)
       for (let p = n.previousElementSibling; p; p = p.previousElementSibling) { const t = text(p); if (t && t.length < 300) return t; if (t) break; }
     return '';
   };
-  document.querySelectorAll('input, select, textarea, button, [role=combobox], [role=radio], [role=checkbox]').forEach((el, i) => {
+  scope.querySelectorAll('input, select, textarea, button, [role=combobox], [role=radio], [role=checkbox]').forEach((el, i) => {
     if (el.type === 'hidden' || el.getAttribute('aria-hidden') === 'true') return;   // helpers people never see
     const r = el.getBoundingClientRect();
     if (!(r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden') && el.type !== 'file') return;
@@ -37,7 +40,8 @@ FIELDS_JS = r"""() => {
       label: label.slice(0, 300), group: group.slice(0, 300), value: (el.value || '').slice(0, 300), checked: !!el.checked,
       text: text(el).slice(0, 120), required: !!(el.required || el.getAttribute('aria-required') === 'true'),
       combo: el.getAttribute('role') === 'combobox' || el.getAttribute('aria-autocomplete') === 'list',
-      options: el.tagName === 'SELECT' ? [...el.options].map(o => o.text.trim()) : null});
+      options: el.tagName === 'SELECT' ? [...el.options].map(o => o.text.trim()) : null,
+      selected: el.tagName === 'SELECT' && el.selectedOptions.length ? el.selectedOptions[0].text.trim() : ''});
   });
   return out;
 }"""
@@ -109,8 +113,9 @@ class Browser:
             if frame.is_visible() and box and box["width"] > 50 and box["height"] > 50: return "CAPTCHA"
         return None
 
-    def fields(self) -> list[dict]:
-        return self.p().evaluate(FIELDS_JS)
+    def fields(self, within: str | None = None) -> list[dict]:
+        """Form fields on the page, or only inside `within` (a CSS selector, e.g. a dialog)."""
+        return self.p().evaluate(FIELDS_JS, within)
 
     def fill(self, sel: str, value: str):
         self.p().fill(sel, value, timeout=15000)

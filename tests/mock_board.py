@@ -134,3 +134,49 @@ def intern_applications():
     rows = "".join(f"<div><p>{escape(_intern(x['internshala'])['company'])}</p><p>{escape(_intern(x['internshala'])['title'])}</p><p>Applied</p></div>"
                    for x in SUBMISSIONS if "internshala" in x)
     return f"<html><body><h1>My applications</h1>{rows or '<p>No applications yet</p>'}</body></html>"
+
+
+# ---------- a LinkedIn-like job page with a multi-step Easy Apply window ----------
+
+LINKEDIN = {"4011111111": {"title": "AI Engineer Intern", "company": "Mock Labs", "kind": "easy"},
+            "4022222222": {"title": "Data Analyst", "company": "Elsewhere Inc", "kind": "external"},
+            "4033333333": {"title": "ML Engineer", "company": "Been There", "kind": "applied"}}
+
+EASY_APPLY = """<div role="dialog" id="dlg" hidden aria-label="Apply to {company}"><h2>Apply to {company}</h2>
+<form method="post" action="/jobs/view/{jid}/easy-apply" enctype="multipart/form-data">
+<section data-step="1"><h3>Contact info</h3>
+  <label for="fn">First name</label><input id="fn" name="first_name" value="Asha">
+  <label for="em">Email address</label><input id="em" name="email" value="asha@example.com">
+  <label for="cc">Phone country code</label><select id="cc" name="cc"><option>Select an option</option><option selected value="in">India (+91)</option></select>
+  <label for="ph">Mobile phone number</label><input id="ph" name="phone" required>
+  <button type="button" onclick="go(2)">Next</button></section>
+<section data-step="2" hidden><h3>Resume</h3><label for="up">Upload resume</label>
+  <input id="jobs-document-upload-file-input-upload-resume" name="resume" type="file" style="display:none">
+  <button type="button" onclick="go(3)">Next</button></section>
+<section data-step="3" hidden><h3>Additional questions</h3>
+  <label for="py">How many years of work experience do you have with Python?</label><input id="py" name="py" required>
+  <label for="au">Are you legally authorized to work in India?</label><select id="au" name="authorized" required><option value="">Select an option</option><option>Yes</option><option>No</option></select>
+  <button type="button" onclick="go(4)">Review</button></section>
+<section data-step="4" hidden><h3>Review your application</h3><p>Check your details, then submit.</p>
+  <button type="submit">Submit application</button></section>
+</form></div>
+<script>function go(n) {{ document.querySelectorAll('[data-step]').forEach(s => s.hidden = s.dataset.step != n); }}</script>"""
+
+
+@app.get("/jobs/view/{jid}/", response_class=HTMLResponse)
+@app.get("/jobs/view/{jid}", response_class=HTMLResponse)
+def linkedin_job(jid: str):
+    if jid not in LINKEDIN: raise HTTPException(404)
+    j = LINKEDIN[jid]
+    button = {"easy": '<button onclick="document.getElementById(\'dlg\').hidden = false">Easy Apply</button>',
+              "external": '<a href="https://careers.elsewhere.example/apply">Apply</a>', "applied": "<p>Applied 2 days ago</p>"}[j["kind"]]
+    return f"""<html><body><nav>Home My Network Jobs</nav><h1>{escape(j['title'])}</h1><p>{escape(j['company'])}</p><p>Bengaluru, Karnataka, India · Remote</p>
+{button}<h2>About the job</h2><p>Build LLM and RAG features in Python. Internship, 6 months.</p>
+{EASY_APPLY.format(company=escape(j['company']), jid=jid) if j['kind'] == 'easy' else ''}</body></html>"""
+
+
+@app.post("/jobs/view/{jid}/easy-apply", response_class=HTMLResponse)
+async def linkedin_submit(jid: str, request: Request):
+    f = await request.form(); resume = f.get("resume")
+    SUBMISSIONS.append({"linkedin": jid, **{k: v for k, v in f.items() if k != "resume"}, "resume_name": getattr(resume, "filename", "")})
+    return f"<div role='dialog'><h2>Your application was sent to {escape(LINKEDIN[jid]['company'])}!</h2><button>Done</button></div>"

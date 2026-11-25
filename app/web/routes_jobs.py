@@ -1,9 +1,11 @@
 """Job Search, Ranked Jobs, Job Details, saved searches and imports."""
+import httpx
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import or_, select
 
 from .. import db, jobs, letters
+from ..ai import service
 from ..automation import applications, worker
 from ..platforms import PLATFORMS, offered
 from .core import CTX, Ctx, app, back, page
@@ -37,7 +39,8 @@ def jobs_page(request: Request, q: str = "", platform: str = "", verdict: str = 
     p, _ = profiles.current(ctx.s, ctx.uid)
     return page(request, "jobs.html", ctx, items=items, total=total, pg=pg, pages=max(1, -(-total // PAGE)), platforms=offered(),
                 f=dict(q=q, platform=platform, verdict=verdict, min_score=min_score, mode=mode, jtype=jtype, sort=sort, bookmarked=bookmarked),
-                history=history, saved=saved, roles=p.preferences.roles, locations=p.preferences.locations)
+                history=history, saved=saved, roles=p.preferences.roles, locations=p.preferences.locations,
+                opted=service.settings(ctx.s, ctx.uid).opt_in or [])
 
 
 @app.post("/jobs/search")
@@ -69,19 +72,23 @@ def delete_saved(sid: int, ctx: Ctx = CTX):
 
 
 @app.post("/jobs/import")
-def import_job(url: str = Form(""), title: str = Form(...), company: str = Form(""), location: str = Form(""), salary: str = Form(""),
-               description: str = Form(...), ctx: Ctx = CTX):
+def import_job(url: str = Form(""), title: str = Form(""), company: str = Form(""), location: str = Form(""), salary: str = Form(""),
+               description: str = Form(""), ctx: Ctx = CTX):
     try:
         job = jobs.import_manual(ctx.s, ctx.uid, {"url": url, "title": title, "company": company, "location": location, "salary": salary,
                                                  "description": description})
     except ValueError as e:
         return back("/jobs", str(e), "err")
+    except httpx.HTTPError as e:
+        return back("/jobs", f"Couldn't read the job from the employer's site ({type(e).__name__}); try again, or add the title and description", "err")
     return back(f"/jobs/{job.id}", "Imported. Rank it to see how well it fits.")
 
 
 @app.post("/jobs/import-page")
 def import_page(platform: str = Form(...), ctx: Ctx = CTX):
-    if PLATFORMS.get(platform, PLATFORMS["other"]).discovery != "page_import": return back("/jobs", "That site's jobs can't be imported from the browser", "err")
+    pol = PLATFORMS.get(platform, PLATFORMS["other"])
+    if pol.discovery != "page_import" and not (pol.opt_in and platform in (service.settings(ctx.s, ctx.uid).opt_in or [])):
+        return back("/jobs", "That site's jobs can't be imported from the browser", "err")
     worker.enqueue(ctx.s, ctx.uid, "import_page", {"platform": platform})
     return back("/console", f"Reading the {PLATFORMS[platform].name} job open in the app's browser")
 
@@ -110,8 +117,7 @@ def job_page(request: Request, jid: int, ctx: Ctx = CTX):
     cl, v = letters.current(ctx.s, ctx.uid, jid)
     a = applications.for_job(ctx.s, ctx.uid, jid)
     pol = PLATFORMS.get(job.platform, PLATFORMS["other"])
-    from ..platforms import apply_adapter
-    return page(request, "job.html", ctx, j=job, sc=sc, letter=v, app_row=a, pol=pol, automated=apply_adapter(job) is not None,
+    return page(request, "job.html", ctx, j=job, sc=sc, letter=v, app_row=a, pol=pol, automated=applications.adapter_for(ctx.s, ctx.uid, job) is not None,
                 resume=resumes.default(ctx.s, ctx.uid), tailored=resumes.tailored_for(ctx.s, ctx.uid, jid))
 
 

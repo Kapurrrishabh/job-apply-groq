@@ -55,6 +55,12 @@ def search(s, user_id: int, platform: str, params: dict, browser=None, execution
 
 
 def import_manual(s, user_id: int, fields: dict) -> db.Job:
+    """A pasted job. For Greenhouse, Lever and Ashby links, anything you left blank comes from the employer's public job board."""
+    from .platforms.ats import parse_link, posting
+    if parse_link(fields.get("url", "")) and not (fields.get("title") and fields.get("description")):
+        fields = {**posting(fields["url"]), **{k: v for k, v in fields.items() if v}}
+    elif not (fields.get("title") and fields.get("description")):
+        raise ValueError("Add a title and the job description, or paste a Greenhouse, Lever or Ashby link and they are filled in for you")
     ad, _ = adapters()
     row, _ = upsert(s, user_id, ad["manual"].normalize_job(fields))
     events.emit(s, user_id, f"Imported {row.title} at {row.company or 'unknown company'} ({PLATFORMS.get(row.platform, PLATFORMS['other']).name})",
